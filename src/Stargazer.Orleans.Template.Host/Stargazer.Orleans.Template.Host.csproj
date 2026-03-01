@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.11.5" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Orleans.Client" Version="9.2.1" />
+    <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="9.2.1" />
+    <PackageReference Include="Microsoft.Orleans.Clustering.Consul" Version="9.2.1" />
+    <PackageReference Include="Microsoft.Orleans.Clustering.Redis" Version="9.2.1" />
+    <PackageReference Include="Npgsql" Version="10.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\aspire\Stargazer.ServiceDefaults\Stargazer.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.Template.Grains.Abstractions\Stargazer.Orleans.Template.Grains.Abstractions.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.Utility\Stargazer.Orleans.Utility.csproj" />
+  </ItemGroup>
+
+
+</Project>

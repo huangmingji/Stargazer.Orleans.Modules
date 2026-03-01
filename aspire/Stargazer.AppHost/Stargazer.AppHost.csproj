@@ -1,0 +1,34 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.0.1">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UserSecretsId>21cc064c-b43a-4477-ac6f-bee5e8883147</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.MongoDB" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.NodeJs" Version="9.5.2" />
+    <PackageReference Include="Aspire.Hosting.Orleans" Version="13.1.0" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.MySql" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.Seq" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.Oracle" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.Keycloak" Version="13.0.2-preview.1.25603.5" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.0.0" />
+    <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Stargazer.Orleans.Template.Client\Stargazer.Orleans.Template.Client.csproj" />
+    <ProjectReference Include="..\..\src\Stargazer.Orleans.Template.Host\Stargazer.Orleans.Template.Host.csproj" />
+    <ProjectReference Include="..\..\src\Stargazer.Orleans.Template.Silo\Stargazer.Orleans.Template.Silo.csproj" />
+  </ItemGroup>
+
+</Project>

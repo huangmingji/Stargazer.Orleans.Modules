@@ -1,0 +1,14 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "huangmingji<huangmingji@stargazer.tech>",
+    "classifications": [ "Orleans", "Stargazer", "Template"],
+    "identity": "Stargazer.Orleans.Template",
+    "name": "Stargazer.Orleans.Template",
+    "shortName": "orleans-app",
+    "tags": {
+      "language": "C#",
+      "type": "project"
+    },
+    "sourceName": "Stargazer.Orleans.Template",
+    "preferNameDirectory": true
+  }

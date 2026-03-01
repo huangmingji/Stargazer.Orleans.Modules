@@ -1,0 +1,145 @@
+using System.Data.Common;
+using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
+using Stargazer.Orleans.Template.Domain;
+
+namespace Stargazer.Orleans.Template.EntityFrameworkCore.Repositories
+{
+    internal sealed class Repository<TEntity, TKey>(IDbContextProvider<EfDbContext> dbContextProvider)
+        : IRepository<TEntity, TKey>
+        where TEntity : class, IEntity<TKey>, new()
+        where TKey : notnull
+    {
+        public async Task DeleteAsync(TKey id, CancellationToken cancellationToken = default)
+        {
+            TEntity? entity = await this.FindAsync(id, cancellationToken);
+            if (entity != null)
+            {
+                dbContextProvider.GetDbContext().Set<TEntity>().Attach(entity);
+                dbContextProvider.GetDbContext().Entry(entity).State = EntityState.Deleted;
+                await dbContextProvider.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        public async Task DeleteManyAsync(IEnumerable<TKey> ids, CancellationToken cancellationToken = default)
+        {
+            List<TEntity> entities = await this.FindListAsync(x => ids.Contains(x.Id), cancellationToken);
+            foreach (var entity in entities)
+            {
+                dbContextProvider.GetDbContext().Set<TEntity>().Attach(entity);
+                dbContextProvider.GetDbContext().Entry(entity).State = EntityState.Deleted;
+            }
+            await dbContextProvider.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task<TEntity> GetAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        {
+            IQueryable<TEntity> queryable = GetQueryable();
+            var data = await dbContextProvider.GetDbContext().Set<TEntity>().Where(predicate).FirstOrDefaultAsync(cancellationToken);
+            if (data == null)
+            {
+                throw new EntityNotFoundException();
+            }
+            return data;
+        }
+
+        public async Task<List<TEntity>> FindAllAsync(CancellationToken cancellationToken = default)
+        {
+            return await GetQueryable().ToListAsync(cancellationToken);
+        }
+
+        public async Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        {
+            return await dbContextProvider.GetDbContext().Set<TEntity>().Where(predicate).FirstOrDefaultAsync(cancellationToken);
+        }
+        
+        public async Task<List<TEntity>> FindListAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken = default)
+        {
+            return await dbContextProvider.GetDbContext().Set<TEntity>().Where(predicate).ToListAsync(cancellationToken);
+        }
+
+        public List<TEntity> FindList(Expression<Func<TEntity, bool>> expression, int pageIndex, int pageSize,
+                    Func<TEntity, Object>? orderBy = null, Func<TEntity, Object>? orderByDescending = null, CancellationToken cancellationToken = default)
+        {
+            IEnumerable<TEntity> queryable = this.Where(expression);
+            if (orderBy != null)
+            {
+                queryable = queryable.OrderBy(orderBy);
+            }
+            if (orderByDescending != null)
+            {
+                queryable = queryable.OrderByDescending(orderByDescending);
+            }
+            return queryable.Skip(pageSize * (pageIndex - 1)).Take(pageSize).ToList();
+        }
+
+        public async Task<List<TEntity>> FindListAsync(string sql, CancellationToken cancellationToken = default)
+        {
+            return await dbContextProvider.GetDbContext().Set<TEntity>().FromSqlRaw(sql).ToListAsync(cancellationToken);
+        }
+
+        public async Task<List<TEntity>> FindListAsync(string sql, DbParameter[] dbParameter, CancellationToken cancellationToken = default)
+        {
+            return await dbContextProvider.GetDbContext().Set<TEntity>().FromSqlRaw(sql, dbParameter).ToListAsync(cancellationToken);
+        }
+
+        public IQueryable<TEntity> GetQueryable()
+        {
+            return dbContextProvider.GetDbContext().Set<TEntity>();
+        }
+
+        public async Task<TEntity> InsertAsync(TEntity entity, CancellationToken cancellationToken = default)
+        {
+            dbContextProvider.GetDbContext().Entry(entity).State = EntityState.Added;
+            await dbContextProvider.SaveChangesAsync(cancellationToken);
+            return entity;
+        }
+
+        public async Task<List<TEntity>> InsertAsync(List<TEntity> entities, CancellationToken cancellationToken = default)
+        {
+            foreach (var entity in entities)
+            {
+                dbContextProvider.GetDbContext().Entry(entity).State = EntityState.Added;
+            }
+            await dbContextProvider.SaveChangesAsync(cancellationToken);
+            return entities;
+        }
+
+        private IQueryable<TEntity> Where(Expression<Func<TEntity, bool>> predicate)
+        {
+            return GetQueryable().Where(predicate);
+        }
+
+        public async Task<TEntity> UpdateAsync(TEntity entity, CancellationToken cancellationToken = default)
+        {
+            dbContextProvider.GetDbContext().Entry(entity).State = EntityState.Modified;
+            await dbContextProvider.SaveChangesAsync(cancellationToken);
+            return entity;
+        }
+        
+        public async Task<TEntity> GetAsync(TKey id, CancellationToken cancellationToken = default)
+        {
+            var data = await GetQueryable().Where(x => x.Id.Equals(id)).FirstOrDefaultAsync(cancellationToken);
+            if (data == null)
+            {
+                throw new EntityNotFoundException();
+            }
+            return data;
+        }
+
+        public async Task<TEntity?> FindAsync(TKey id, CancellationToken cancellationToken = default)
+        {
+            return await GetQueryable().Where(x => x.Id.Equals(id)).FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<bool> AnyAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default)
+        {
+            return await Where(expression).AnyAsync(expression, cancellationToken);
+        }
+
+        public async Task<int> CountAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default)
+        {
+            return await Where(expression).CountAsync(cancellationToken);
+        }
+    }
+}
