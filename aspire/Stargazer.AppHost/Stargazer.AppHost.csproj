@@ -9,26 +9,25 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.0.2" />
-    <PackageReference Include="Aspire.Hosting.MongoDB" Version="13.0.2" />
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.MongoDB" Version="13.1.2" />
     <PackageReference Include="Aspire.Hosting.NodeJs" Version="9.5.2" />
-    <PackageReference Include="Aspire.Hosting.Orleans" Version="13.1.0" />
-    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.0.2" />
-    <PackageReference Include="Aspire.Hosting.MySql" Version="13.0.2" />
-    <PackageReference Include="Aspire.Hosting.Seq" Version="13.0.2" />
-    <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.0.2" />
-    <PackageReference Include="Aspire.Hosting.Oracle" Version="13.0.2" />
-    <PackageReference Include="Aspire.Hosting.Redis" Version="13.0.2" />
-    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.0.2" />
-    <PackageReference Include="Aspire.Hosting.Keycloak" Version="13.0.2-preview.1.25603.5" />
-    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.0.0" />
+    <PackageReference Include="Aspire.Hosting.Orleans" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.MySql" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.Seq" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.SqlServer" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.Oracle" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.RabbitMQ" Version="13.1.2" />
+    <PackageReference Include="Aspire.Hosting.Keycloak" Version="13.1.2-preview.1.26125.13" />
+    <PackageReference Include="CommunityToolkit.Aspire.Hosting.Ollama" Version="13.1.1" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Stargazer.Orleans.Template.Client\Stargazer.Orleans.Template.Client.csproj" />
-    <ProjectReference Include="..\..\src\Stargazer.Orleans.Template.Host\Stargazer.Orleans.Template.Host.csproj" />
-    <ProjectReference Include="..\..\src\Stargazer.Orleans.Template.Silo\Stargazer.Orleans.Template.Silo.csproj" />
+    <ProjectReference Include="..\..\modules\ObjectStorage\src\Stargazer.Orleans.ObjectStorage.Silo\Stargazer.Orleans.ObjectStorage.Silo.csproj" />
+    <ProjectReference Include="..\..\modules\Users\src\Stargazer.Orleans.Users.Silo\Stargazer.Orleans.Users.Silo.csproj" />
   </ItemGroup>
 
 </Project>

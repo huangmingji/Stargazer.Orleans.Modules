@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.Domain\Stargazer.Orleans.ObjectStorage.Domain.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.Grains.Abstractions\Stargazer.Orleans.ObjectStorage.Grains.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Persistence.AdoNet" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.0.1" />
+    <PackageReference Include="Npgsql" Version="10.0.1" />
+    <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

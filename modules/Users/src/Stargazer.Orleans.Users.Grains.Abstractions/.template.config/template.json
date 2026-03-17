@@ -1,0 +1,14 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "huangmingji<huangmingji@stargazer.tech>",
+    "classifications": [ "Orleans", "Stargazer", "Template"],
+    "identity": "Stargazer.Orleans.Template.GrainInterface",
+    "name": "Stargazer.Orleans.Template.GrainInterface",
+    "shortName": "orleans-grain-interface",
+    "tags": {
+      "language": "C#",
+      "type": "project"
+    },
+    "sourceName": "Stargazer.Orleans.Template",
+    "preferNameDirectory": true
+  }

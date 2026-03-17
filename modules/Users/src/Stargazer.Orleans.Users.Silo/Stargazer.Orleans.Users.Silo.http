@@ -1,0 +1,7 @@
+@Stargazer.Orleans.Users.Host_HostAddress = http://localhost:5079
+
+GET {{Stargazer.Orleans.Users.Host_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+

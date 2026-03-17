@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Stargazer.Orleans.Users.Domain\Stargazer.Orleans.Users.Domain.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.Users.Grains.Abstractions\Stargazer.Orleans.Users.Grains.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Persistence.AdoNet" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.0.1" />
+    <PackageReference Include="Npgsql" Version="10.0.1" />
+    <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Grains\AccountGrain.cs" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>
+
