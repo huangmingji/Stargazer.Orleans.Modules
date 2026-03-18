@@ -16,6 +16,7 @@ public class RoleController(IClusterClient client, ILogger<RoleController> logge
     private readonly IClusterClient _client = client;
     
     [HttpGet]
+    [Authorize(policy: "permission:role.view")]
     public async Task<IActionResult> GetRoles([FromQuery] string? keyword, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
         var roleGrain = _client.GetGrain<IRoleGrain>(0);
@@ -24,6 +25,7 @@ public class RoleController(IClusterClient client, ILogger<RoleController> logge
     }
     
     [HttpGet("{id:guid}")]
+    [Authorize(policy: "permission:role.view")]
     public async Task<IActionResult> GetRole(Guid id, CancellationToken cancellationToken = default)
     {
         var roleGrain = _client.GetGrain<IRoleGrain>(0);
@@ -36,6 +38,7 @@ public class RoleController(IClusterClient client, ILogger<RoleController> logge
     }
     
     [HttpPost]
+    [Authorize(policy: "permission:role.create")]
     public async Task<IActionResult> CreateRole([FromBody] CreateOrUpdateRoleInputDto input, CancellationToken cancellationToken = default)
     {
         var roleGrain = _client.GetGrain<IRoleGrain>(0);
@@ -44,6 +47,7 @@ public class RoleController(IClusterClient client, ILogger<RoleController> logge
     }
     
     [HttpPut("{id:guid}")]
+    [Authorize(policy: "permission:role.update")]
     public async Task<IActionResult> UpdateRole(Guid id, [FromBody] CreateOrUpdateRoleInputDto input, CancellationToken cancellationToken = default)
     {
         var roleGrain = _client.GetGrain<IRoleGrain>(0);
@@ -52,6 +56,7 @@ public class RoleController(IClusterClient client, ILogger<RoleController> logge
     }
     
     [HttpDelete("{id:guid}")]
+    [Authorize(policy: "permission:role.delete")]
     public async Task<IActionResult> DeleteRole(Guid id, CancellationToken cancellationToken = default)
     {
         var roleGrain = _client.GetGrain<IRoleGrain>(0);
@@ -64,6 +69,7 @@ public class RoleController(IClusterClient client, ILogger<RoleController> logge
     }
     
     [HttpGet("{id:guid}/permissions")]
+    [Authorize(policy: "permission:role.view")]
     public async Task<IActionResult> GetRolePermissions(Guid id, CancellationToken cancellationToken = default)
     {
         var roleGrain = _client.GetGrain<IRoleGrain>(0);
@@ -72,6 +78,7 @@ public class RoleController(IClusterClient client, ILogger<RoleController> logge
     }
     
     [HttpPost("{id:guid}/permissions")]
+    [Authorize(policy: "permission:role.assign")]
     public async Task<IActionResult> AssignPermissions(Guid id, [FromBody] List<Guid> permissionIds, CancellationToken cancellationToken = default)
     {
         var roleGrain = _client.GetGrain<IRoleGrain>(0);
@@ -80,6 +87,7 @@ public class RoleController(IClusterClient client, ILogger<RoleController> logge
     }
     
     [HttpGet("active")]
+    [Authorize(policy: "permission:role.view")]
     public async Task<IActionResult> GetActiveRoles(CancellationToken cancellationToken = default)
     {
         var roleGrain = _client.GetGrain<IRoleGrain>(0);

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -9,6 +10,7 @@ using Stargazer.Common.Extend;
 using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.Users.Silo;
+using Stargazer.Orleans.Users.Silo.Authorization;
 using Stargazer.Orleans.Users.Silo.Middleware;
 using Stargazer.Orleans.Users.Silo.Security;
 using System.Text;
@@ -55,7 +57,11 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPermissionPolicies();
+});
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

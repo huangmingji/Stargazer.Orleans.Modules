@@ -35,6 +35,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpGet("{id:guid}")]
+    [Authorize(policy: "permission:user.view")]
     public async Task<IActionResult> GetUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -49,6 +50,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpGet]
+    [Authorize(policy: "permission:user.view")]
     public async Task<IActionResult> GetUsers([FromQuery] string? keyword, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -57,6 +59,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPost]
+    [Authorize(policy: "permission:user.create")]
     public async Task<IActionResult> CreateUser([FromBody] CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -65,6 +68,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPut("{id:guid}")]
+    [Authorize(policy: "permission:user.update")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -73,14 +77,22 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpDelete("{id:guid}")]
+    [Authorize(policy: "permission:user.delete")]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
-        await userGrain.DeleteUserAsync(id, cancellationToken);
+        var result = await userGrain.DeleteUserAsync(id, cancellationToken);
+        
+        if (!result)
+        {
+            return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
+        }
+        
         return Ok(ResponseData.Success(message: "User deleted successfully."));
     }
     
     [HttpPost("{id:guid}/roles")]
+    [Authorize(policy: "permission:user.assign")]
     public async Task<IActionResult> AssignRoles(Guid id, [FromBody] List<Guid> roleIds, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -95,6 +107,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpGet("{id:guid}/roles")]
+    [Authorize(policy: "permission:user.view")]
     public async Task<IActionResult> GetUserRoles(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -103,6 +116,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpGet("{id:guid}/permissions")]
+    [Authorize(policy: "permission:user.view")]
     public async Task<IActionResult> GetUserPermissions(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -111,6 +125,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPost("{id:guid}/disable")]
+    [Authorize(policy: "permission:user.update")]
     public async Task<IActionResult> DisableUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -125,6 +140,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPost("{id:guid}/enable")]
+    [Authorize(policy: "permission:user.update")]
     public async Task<IActionResult> EnableUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
