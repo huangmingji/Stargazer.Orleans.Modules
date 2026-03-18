@@ -10,4 +10,7 @@ public class RegisterAccountInputDto
 
     [Id(1)]
     public string Password { get; set; } = "";
+    
+    [Id(2)]
+    public string? Role { get; set; } = "User";
 }

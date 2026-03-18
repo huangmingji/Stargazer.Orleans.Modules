@@ -22,4 +22,10 @@ public class CreateOrUpdateUserInputDto
 
     [Id(5)]
     public string Avatar { get; set; } = "";
+    
+    [Id(6)]
+    public bool IsActive { get; set; } = true;
+    
+    [Id(7)]
+    public string? Role { get; set; }
 }

@@ -13,5 +13,9 @@
     <PackageReference Include="Stargazer.Common" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Stargazer.Orleans.Users.Domain\Stargazer.Orleans.Users.Domain.csproj" />
+  </ItemGroup>
+
 </Project>
 

@@ -1,4 +1,5 @@
 using Orleans;
+using Stargazer.Orleans.Users.Grains.Abstractions.Roles.Dtos;
 
 namespace Stargazer.Orleans.Users.Grains.Abstractions.Users.Dtos;
 
@@ -34,4 +35,10 @@ public class UserDataDto
 
     [Id(9)]
     public DateTime? LastModifyTime { get; set; }
+    
+    [Id(10)]
+    public bool IsActive { get; set; } = true;
+    
+    [Id(11)]
+    public List<RoleDataDto> Roles { get; set; } = new();
 }

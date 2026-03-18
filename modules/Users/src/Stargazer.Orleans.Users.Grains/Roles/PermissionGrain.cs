@@ -1,0 +1,106 @@
+using Orleans.Concurrency;
+using Stargazer.Common;
+using Stargazer.Common.SequentialGuid;
+using Stargazer.Orleans.Users.Domain.Permissions;
+using Stargazer.Orleans.Users.Domain.Roles;
+using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL;
+using Stargazer.Orleans.Users.Grains.Abstractions;
+using Stargazer.Orleans.Users.Grains.Abstractions.Roles;
+using Stargazer.Orleans.Users.Grains.Abstractions.Roles.Dtos;
+
+namespace Stargazer.Orleans.Users.Grains.Roles;
+
+[StatelessWorker]
+public class PermissionGrain(
+    IRepository<PermissionData, Guid> permissionRepository,
+    IRepository<RoleData, Guid> roleRepository) : Grain, IPermissionGrain
+{
+    public async Task<PermissionDataDto?> GetPermissionAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var permission = await permissionRepository.FindAsync(id, cancellationToken);
+        return permission?.MapToPermissionDto();
+    }
+
+    public async Task<PermissionDataDto?> GetPermissionByCodeAsync(string code, CancellationToken cancellationToken = default)
+    {
+        var permission = await permissionRepository.FindAsync(x => x.Code == code, cancellationToken);
+        return permission?.MapToPermissionDto();
+    }
+
+    public async Task<List<PermissionDataDto>> GetPermissionsAsync(CancellationToken cancellationToken = default)
+    {
+        var permissions = await permissionRepository.FindAllAsync(cancellationToken);
+        return permissions.Select(x => x.MapToPermissionDto()).ToList();
+    }
+
+    public async Task<List<PermissionDataDto>> GetPermissionsByCategoryAsync(string category, CancellationToken cancellationToken = default)
+    {
+        var permissions = await permissionRepository.FindListAsync(x => x.Category == category, cancellationToken);
+        return permissions.Select(x => x.MapToPermissionDto()).ToList();
+    }
+
+    public async Task<PageResult<PermissionDataDto>> GetPermissionsAsync(string? keyword, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
+    {
+        var query = permissionRepository.GetQueryable();
+        if (!string.IsNullOrEmpty(keyword))
+        {
+            query = query.Where(x => x.Name.Contains(keyword) || x.Code.Contains(keyword) || x.Category.Contains(keyword));
+        }
+        var total = query.Count();
+        var items = query.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList().Select(x => x.MapToPermissionDto()).ToList();
+        return new PageResult<PermissionDataDto>
+        {
+            Total = total,
+            Items = items
+        };
+    }
+
+    public async Task<PermissionDataDto> CreatePermissionAsync(PermissionDataDto input, CancellationToken cancellationToken = default)
+    {
+        var permission = new PermissionData
+        {
+            Id = input.Id == Guid.Empty ? new SequentialGuid().Create() : input.Id,
+            Name = input.Name,
+            Code = input.Code,
+            Description = input.Description,
+            Category = input.Category,
+            Type = (PermissionType)input.Type,
+            IsActive = input.IsActive,
+            CreationTime = DateTime.UtcNow
+        };
+        
+        var result = await permissionRepository.InsertAsync(permission, cancellationToken);
+        return result.MapToPermissionDto();
+    }
+
+    public async Task<PermissionDataDto> UpdatePermissionAsync(Guid id, PermissionDataDto input, CancellationToken cancellationToken = default)
+    {
+        var permission = await permissionRepository.GetAsync(id, cancellationToken);
+        permission.Name = input.Name;
+        permission.Code = input.Code;
+        permission.Description = input.Description;
+        permission.Category = input.Category;
+        permission.Type = (PermissionType)input.Type;
+        permission.IsActive = input.IsActive;
+        permission.LastModifyTime = DateTime.UtcNow;
+        
+        var result = await permissionRepository.UpdateAsync(permission, cancellationToken);
+        return result.MapToPermissionDto();
+    }
+
+    public async Task<bool> DeletePermissionAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var permission = await permissionRepository.FindAsync(id, cancellationToken);
+        if (permission is null) return false;
+        
+        var roles = await roleRepository.FindListAsync(x => x.Permissions.Any(p => p.Id == id), cancellationToken);
+        foreach (var role in roles)
+        {
+            role.Permissions.Remove(permission);
+            await roleRepository.UpdateAsync(role, cancellationToken);
+        }
+        
+        await permissionRepository.DeleteAsync(id, cancellationToken);
+        return true;
+    }
+}

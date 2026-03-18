@@ -1,4 +1,6 @@
 using Orleans;
+using Stargazer.Orleans.Users.Grains.Abstractions;
+using Stargazer.Orleans.Users.Grains.Abstractions.Roles.Dtos;
 using Stargazer.Orleans.Users.Grains.Abstractions.Users.Dtos;
 
 namespace Stargazer.Orleans.Users.Grains.Abstractions.Users;
@@ -30,4 +32,20 @@ public interface IUserGrain : IGrainWithIntegerKey
     Task<bool> EmailExistedAsync(string email, CancellationToken cancellationToken = default);
     
     Task<bool> PhoneNumberExistedAsync(string phoneNumber, CancellationToken cancellationToken = default);
+    
+    Task<UserDataDto?> GetUserByAccountAsync(string account, CancellationToken cancellationToken = default);
+    
+    Task<bool> DisableUserAsync(Guid id, CancellationToken cancellationToken = default);
+    
+    Task<bool> EnableUserAsync(Guid id, CancellationToken cancellationToken = default);
+    
+    Task<UserDataDto?> GetUserProfileAsync(Guid id, CancellationToken cancellationToken = default);
+    
+    Task<bool> AssignRolesAsync(Guid userId, List<Guid> roleIds, CancellationToken cancellationToken = default);
+    
+    Task<List<RoleDataDto>> GetUserRolesAsync(Guid userId, CancellationToken cancellationToken = default);
+    
+    Task<bool> HasPermissionAsync(Guid userId, string permissionCode, CancellationToken cancellationToken = default);
+    
+    Task<List<PermissionDataDto>> GetUserPermissionsAsync(Guid userId, CancellationToken cancellationToken = default);
 }

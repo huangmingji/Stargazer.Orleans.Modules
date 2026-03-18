@@ -15,4 +15,8 @@ public sealed class UserData : Entity<Guid>
     public string PhoneNumber { get; set; } = "";
 
     public string Avatar { get; set; } = "";
+    
+    public bool IsActive { get; set; } = true;
+    
+    public List<UserRoles.UserRoleData> UserRoles { get; set; } = new();
 }
