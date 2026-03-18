@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.OpenApi;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
@@ -8,6 +9,9 @@ using Stargazer.Common.Extend;
 using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.Users.Silo;
+using Stargazer.Orleans.Users.Silo.Middleware;
+using Stargazer.Orleans.Users.Silo.Security;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -27,6 +31,32 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Services.UseEntityFramworkCore().MigrateDatabase();
 
+var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? throw new InvalidOperationException("JwtSettings not configured");
+builder.Services.AddSingleton(jwtSettings);
+builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
@@ -36,9 +66,9 @@ builder.Services.AddOpenApi(options =>
     {
         document.Info = new()
         {
-            Title = "Stargazer Orleans API",
+            Title = "Stargazer Users API",
             Version = "v1",
-            Description = "Stargazer Orleans API"
+            Description = "Stargazer Users API"
         };
         return Task.CompletedTask;
     });
@@ -62,13 +92,16 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options =>
-        options.WithTitle("Stargazer Orleans API")
+        options.WithTitle("Stargazer Users API")
             .AddPreferredSecuritySchemes(JwtBearerDefaults.AuthenticationScheme)
             .AddHttpAuthentication(JwtBearerDefaults.AuthenticationScheme, auth => { auth.Token = ""; })
     );
 }
 
+app.UseGlobalExceptionMiddleware();
 app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.MapDefaultEndpoints();
 app.Run();

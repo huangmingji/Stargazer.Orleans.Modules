@@ -23,7 +23,7 @@ public interface IUserGrain : IGrainWithIntegerKey
     
     Task UpdateUserAsync(Guid id, CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default);
     
-    Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<bool> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<bool> AccountExistedAsync(string account, CancellationToken cancellationToken = default);
     

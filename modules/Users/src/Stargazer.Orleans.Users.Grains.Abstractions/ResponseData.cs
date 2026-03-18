@@ -10,12 +10,12 @@ public class ResponseData
     [Id(2)]
     public object? Data { get; set; }
     
-    public static ResponseData Success(string code = "success", object? data = null)
+    public static ResponseData Success(string code = "success", string message = "success", object? data = null)
     {
         return new ResponseData
         {
             Code = code,
-            Message = "success",
+            Message = message,
             Data = data
         };
     }

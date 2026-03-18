@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
 using Stargazer.Common;
 using Stargazer.Common.SequentialGuid;
@@ -17,11 +19,13 @@ namespace Stargazer.Orleans.Users.Grains.Grains;
 public class UserGrain(
     IRepository<UserData, Guid> userRepository,
     IRepository<UserRoleData, Guid> userRoleRepository,
-    IRepository<RoleData, Guid> roleRepository) : Grain, IUserGrain
+    IRepository<RoleData, Guid> roleRepository,
+    ILogger<UserGrain> logger) : Grain, IUserGrain
 {
     public async Task ChangePasswordAsync(Guid id, ChangePasswordInputDto input, Guid modifierId,
         CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Changing password for user {UserId}", id);
         var userData = await userRepository.GetAsync(id, cancellationToken);
         userData.Password = Cryptography.PasswordStorage.CreateHash(input.NewPassword, out string secretKey);
         userData.SecretKey = secretKey;
@@ -32,16 +36,28 @@ public class UserGrain(
 
     public async Task<bool> VerifyPasswordAsync(VerifyPasswordInputDto input, CancellationToken cancellationToken = default)
     {
+        logger.LogDebug("Verifying password for account {Account}", input.Name);
         var userData = await userRepository.FindAsync(x => x.Account.Equals(input.Name), cancellationToken);
         if (userData is null || !userData.IsActive)
         {
+            logger.LogWarning("Login failed: user {Account} not found or inactive", input.Name);
             return false;
         }
-        return Cryptography.PasswordStorage.VerifyPassword(input.Password, userData.Password, userData.SecretKey);
+        var result = Cryptography.PasswordStorage.VerifyPassword(input.Password, userData.Password, userData.SecretKey);
+        if (result)
+        {
+            logger.LogInformation("User {Account} logged in successfully", input.Name);
+        }
+        else
+        {
+            logger.LogWarning("Login failed: invalid password for account {Account}", input.Name);
+        }
+        return result;
     }
 
     public async Task<UserDataDto> RegisterAsync(RegisterAccountInputDto input, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Registering new user with account {Account}", input.Account);
         var userData = new UserData()
         {
             Id = new SequentialGuid().Create(),
@@ -115,18 +131,24 @@ public class UserGrain(
         await userRepository.UpdateAsync(userData, cancellationToken);
     }
 
-    public async Task DeleteUserAsync(Guid id, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("Deleting user {UserId}", id);
         var userData = await userRepository.FindAsync(id, cancellationToken);
-        if (userData is not null)
+        if (userData is null) 
         {
-            var userRoles = await userRoleRepository.FindListAsync(x => x.UserId == id, cancellationToken);
-            if (userRoles.Any())
-            {
-                await userRoleRepository.DeleteManyAsync(userRoles.Select(x => x.Id), cancellationToken);
-            }
-            await userRepository.DeleteAsync(id, cancellationToken);
+            logger.LogWarning("Delete user failed: user {UserId} not found", id);
+            return false;
         }
+        
+        var userRoles = await userRoleRepository.FindListAsync(x => x.UserId == id, cancellationToken);
+        if (userRoles.Any())
+        {
+            await userRoleRepository.DeleteManyAsync(userRoles.Select(x => x.Id), cancellationToken);
+        }
+        await userRepository.DeleteAsync(id, cancellationToken);
+        logger.LogInformation("User {UserId} deleted successfully", id);
+        return true;
     }
 
     public async Task<bool> AccountExistedAsync(string account, CancellationToken cancellationToken = default)
@@ -151,17 +173,26 @@ public class UserGrain(
 
     public async Task<PageResult<UserDataDto>> GetUsersAsync(string? keyword, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
     {
-        var query = userRepository.GetQueryable();
+        logger.LogDebug("Getting users with keyword: {Keyword}, page: {PageIndex}, size: {PageSize}", keyword, pageIndex, pageSize);
+        
+        Expression<Func<UserData, bool>>? predicate = null;
         if (!string.IsNullOrEmpty(keyword))
         {
-            query = query.Where(x => x.Account.Contains(keyword) || x.Name.Contains(keyword) || x.Email.Contains(keyword) || x.PhoneNumber.Contains(keyword));
+            predicate = x => x.Account.Contains(keyword) || x.Name.Contains(keyword) || x.Email.Contains(keyword) || x.PhoneNumber.Contains(keyword);
         }
-        var total = query.Count();
-        var items = query.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList().Select(x => x.MapToUserDto()).ToList();
+        
+        var (items, total) = await userRepository.FindListAsync(
+            predicate,
+            pageIndex,
+            pageSize,
+            orderBy: x => x.CreationTime,
+            orderByDescending: true,
+            cancellationToken: cancellationToken);
+        
         return new PageResult<UserDataDto>
         {
             Total = total,
-            Items = items
+            Items = items.Select(x => x.MapToUserDto()).ToList()
         };
     }
 

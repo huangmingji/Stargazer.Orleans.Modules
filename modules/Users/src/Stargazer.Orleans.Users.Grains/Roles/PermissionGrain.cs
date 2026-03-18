@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Orleans.Concurrency;
 using Stargazer.Common;
 using Stargazer.Common.SequentialGuid;
@@ -41,17 +42,24 @@ public class PermissionGrain(
 
     public async Task<PageResult<PermissionDataDto>> GetPermissionsAsync(string? keyword, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
     {
-        var query = permissionRepository.GetQueryable();
+        Expression<Func<PermissionData, bool>>? predicate = null;
         if (!string.IsNullOrEmpty(keyword))
         {
-            query = query.Where(x => x.Name.Contains(keyword) || x.Code.Contains(keyword) || x.Category.Contains(keyword));
+            predicate = x => x.Name.Contains(keyword) || x.Code.Contains(keyword) || x.Category.Contains(keyword);
         }
-        var total = query.Count();
-        var items = query.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList().Select(x => x.MapToPermissionDto()).ToList();
+        
+        var (items, total) = await permissionRepository.FindListAsync(
+            predicate,
+            pageIndex,
+            pageSize,
+            orderBy: x => x.Name,
+            orderByDescending: false,
+            cancellationToken: cancellationToken);
+        
         return new PageResult<PermissionDataDto>
         {
             Total = total,
-            Items = items
+            Items = items.Select(x => x.MapToPermissionDto()).ToList()
         };
     }
 

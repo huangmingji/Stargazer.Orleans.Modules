@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Orleans.Concurrency;
 using Stargazer.Common;
 using Stargazer.Common.SequentialGuid;
@@ -44,17 +45,24 @@ public class RoleGrain(
 
     public async Task<PageResult<RoleDataDto>> GetRolesAsync(string? keyword, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
     {
-        var query = roleRepository.GetQueryable();
+        Expression<Func<RoleData, bool>>? predicate = null;
         if (!string.IsNullOrEmpty(keyword))
         {
-            query = query.Where(x => x.Name.Contains(keyword) || x.Description.Contains(keyword));
+            predicate = x => x.Name.Contains(keyword) || x.Description.Contains(keyword);
         }
-        var total = query.Count();
-        var items = query.Skip((pageIndex - 1) * pageSize).Take(pageSize).ToList().Select(x => x.MapToRoleDto()).ToList();
+        
+        var (items, total) = await roleRepository.FindListAsync(
+            predicate,
+            pageIndex,
+            pageSize,
+            orderBy: x => x.Priority,
+            orderByDescending: true,
+            cancellationToken: cancellationToken);
+        
         return new PageResult<RoleDataDto>
         {
             Total = total,
-            Items = items
+            Items = items.Select(x => x.MapToRoleDto()).ToList()
         };
     }
 

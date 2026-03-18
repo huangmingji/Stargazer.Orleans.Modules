@@ -141,5 +141,35 @@ namespace Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL
         {
             return await Where(expression).CountAsync(cancellationToken);
         }
+
+        public async Task<(List<TEntity> Items, int Total)> FindListAsync(
+            Expression<Func<TEntity, bool>>? predicate,
+            int pageIndex,
+            int pageSize,
+            Expression<Func<TEntity, object>>? orderBy = null,
+            bool orderByDescending = false,
+            CancellationToken cancellationToken = default)
+        {
+            var query = GetQueryable();
+            
+            if (predicate != null)
+            {
+                query = query.Where(predicate);
+            }
+            
+            var total = await query.CountAsync(cancellationToken);
+            
+            if (orderBy != null)
+            {
+                query = orderByDescending ? query.OrderByDescending(orderBy) : query.OrderBy(orderBy);
+            }
+            
+            var items = await query
+                .Skip((pageIndex - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync(cancellationToken);
+            
+            return (items, total);
+        }
     }
 }

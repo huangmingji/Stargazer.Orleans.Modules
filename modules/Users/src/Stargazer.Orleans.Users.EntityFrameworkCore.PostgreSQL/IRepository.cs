@@ -42,4 +42,12 @@ public interface IRepository<TEntity, in TKey>
     Task<List<TEntity>> FindListAsync(string sql, CancellationToken cancellationToken = default);
 
     Task<List<TEntity>> FindListAsync(string sql, DbParameter[] dbParameter, CancellationToken cancellationToken = default);
+    
+    Task<(List<TEntity> Items, int Total)> FindListAsync(
+        Expression<Func<TEntity, bool>>? predicate,
+        int pageIndex,
+        int pageSize,
+        Expression<Func<TEntity, object>>? orderBy = null,
+        bool orderByDescending = false,
+        CancellationToken cancellationToken = default);
 }
