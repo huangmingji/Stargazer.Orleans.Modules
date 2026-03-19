@@ -5,6 +5,8 @@ using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
 using Stargazer.Common.Extend;
+using Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL;
+using Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.ObjectStorage.Silo;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,8 +42,8 @@ builder.Services.AddOpenApi(options =>
     });
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
-// builder.Services.UseEntityFramworkCore()
-//     .MigrateDatabase();
+builder.Services.UseObjectStorageEntityFramworkCore().MigrateDatabase();
+
 builder.Services.AddControllers().AddNewtonsoftJson(
     op =>
     {

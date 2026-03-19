@@ -16,6 +16,8 @@ public class BucketPolicy : Entity<Guid>
     
     public EffectType Effect { get; set; } = EffectType.Allow;
     
+    public PolicyType PolicyType { get; set; } = PolicyType.User;
+    
     public int Priority { get; set; }
     
     public DateTime? StartTime { get; set; }

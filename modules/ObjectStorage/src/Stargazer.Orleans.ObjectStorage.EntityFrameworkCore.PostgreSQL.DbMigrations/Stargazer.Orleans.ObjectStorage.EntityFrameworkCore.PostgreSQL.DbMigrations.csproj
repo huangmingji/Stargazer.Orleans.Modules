@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
             <PrivateAssets>all</PrivateAssets>
@@ -15,8 +16,9 @@
         <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="10.0.0" />
         <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
     </ItemGroup>
+    
     <ItemGroup>
-      <ProjectReference Include="..\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.csproj" />
+      <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.csproj" />
     </ItemGroup>
 
 </Project>

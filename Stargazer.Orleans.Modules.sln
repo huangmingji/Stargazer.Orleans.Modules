@@ -12,6 +12,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "modules", "modules", "{CA253913-39DE-BFD0-C9A3-4B7EC6FBDF17}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Users", "Users", "{6E738700-F19F-83EF-9B5F-3C8900D73B86}"
+	ProjectSection(SolutionItems) = preProject
+		modules\Users\README.md = modules\Users\README.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{EFEC6576-0949-4EB8-2C31-23453054396D}"
 EndProject
@@ -24,6 +27,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.Users.Silo", "modules\Users\src\Stargazer.Orleans.Users.Silo\Stargazer.Orleans.Users.Silo.csproj", "{79BE63C1-482D-4CBA-98F0-9EA2D5FA9091}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ObjectStorage", "ObjectStorage", "{729B075A-FC89-97FC-10A5-A17CCCE913CD}"
+	ProjectSection(SolutionItems) = preProject
+		modules\ObjectStorage\README.md = modules\ObjectStorage\README.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{57AA3328-EF0C-2DB1-407B-8C55EBCA8172}"
 EndProject
@@ -38,6 +44,18 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL", "modules\Users\src\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.csproj", "{271C4F26-B95A-4E2C-9F99-8823256D4E8A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations", "modules\Users\src\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations.csproj", "{113A3C2A-E98A-49A9-862C-6B79A72AD0F7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations", "modules\ObjectStorage\src\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations.csproj", "{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL", "modules\ObjectStorage\src\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.csproj", "{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{ED3E4032-75B9-EAAC-7F39-A5EA44AB6B48}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.ObjectStorage.Tests", "modules\ObjectStorage\tests\Stargazer.Orleans.ObjectStorage.Tests\Stargazer.Orleans.ObjectStorage.Tests.csproj", "{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{9DC77C1F-E1C4-4D46-4C40-8FCF61162BCA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.Users.Tests", "modules\Users\tests\Stargazer.Orleans.Users.Tests\Stargazer.Orleans.Users.Tests.csproj", "{14390F14-BD9E-4B14-B488-22769B305B83}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -193,6 +211,54 @@ Global
 		{113A3C2A-E98A-49A9-862C-6B79A72AD0F7}.Release|x64.Build.0 = Release|Any CPU
 		{113A3C2A-E98A-49A9-862C-6B79A72AD0F7}.Release|x86.ActiveCfg = Release|Any CPU
 		{113A3C2A-E98A-49A9-862C-6B79A72AD0F7}.Release|x86.Build.0 = Release|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Debug|x64.Build.0 = Debug|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Debug|x86.Build.0 = Debug|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Release|x64.ActiveCfg = Release|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Release|x64.Build.0 = Release|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Release|x86.ActiveCfg = Release|Any CPU
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F}.Release|x86.Build.0 = Release|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Debug|x64.Build.0 = Debug|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Debug|x86.Build.0 = Debug|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Release|x64.ActiveCfg = Release|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Release|x64.Build.0 = Release|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Release|x86.ActiveCfg = Release|Any CPU
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC}.Release|x86.Build.0 = Release|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Debug|x64.Build.0 = Debug|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Debug|x86.Build.0 = Debug|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Release|x64.ActiveCfg = Release|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Release|x64.Build.0 = Release|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Release|x86.ActiveCfg = Release|Any CPU
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC}.Release|x86.Build.0 = Release|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Debug|x64.Build.0 = Debug|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Debug|x86.Build.0 = Debug|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Release|x64.ActiveCfg = Release|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Release|x64.Build.0 = Release|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Release|x86.ActiveCfg = Release|Any CPU
+		{14390F14-BD9E-4B14-B488-22769B305B83}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -214,5 +280,11 @@ Global
 		{776811ED-6444-4DF1-B5F2-9D247E8581F5} = {57AA3328-EF0C-2DB1-407B-8C55EBCA8172}
 		{271C4F26-B95A-4E2C-9F99-8823256D4E8A} = {EFEC6576-0949-4EB8-2C31-23453054396D}
 		{113A3C2A-E98A-49A9-862C-6B79A72AD0F7} = {EFEC6576-0949-4EB8-2C31-23453054396D}
+		{832DD3FF-5AD0-4EAC-B8A3-3F6265F4EF5F} = {57AA3328-EF0C-2DB1-407B-8C55EBCA8172}
+		{BBD1FC03-5352-4DC2-8A34-F42A58EDE3CC} = {57AA3328-EF0C-2DB1-407B-8C55EBCA8172}
+		{ED3E4032-75B9-EAAC-7F39-A5EA44AB6B48} = {729B075A-FC89-97FC-10A5-A17CCCE913CD}
+		{BD3EAE5A-BCD6-49D6-9EDD-E806EE0086BC} = {ED3E4032-75B9-EAAC-7F39-A5EA44AB6B48}
+		{9DC77C1F-E1C4-4D46-4C40-8FCF61162BCA} = {6E738700-F19F-83EF-9B5F-3C8900D73B86}
+		{14390F14-BD9E-4B14-B488-22769B305B83} = {9DC77C1F-E1C4-4D46-4C40-8FCF61162BCA}
 	EndGlobalSection
 EndGlobal
