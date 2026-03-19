@@ -252,7 +252,7 @@ curl -X GET "http://localhost:5000/api/storage/object/{bucketId}/my-file.txt/sig
 }
 ```
 
-**注意**: `LocalStorageProvider`、`AliyunOssProvider`、`AwsS3Provider`、`AzureBlobProvider`、`TencentCosProvider` 已实现。`MinioProvider` 待 MinIO SDK 支持 .NET 10 后可用。
+**注意**: 所有存储提供者均已实现，包括 `LocalStorageProvider`、`AliyunOssProvider`、`AwsS3Provider`、`AzureBlobProvider`、`TencentCosProvider` 和 `MinioProvider`。
 
 ## 数据模型
 
@@ -496,4 +496,4 @@ Passed! - Failed: 0, Passed: 39, Skipped: 0, Total: 39
 2. **签名 URL**: 最长有效期为 7 天 (604800 秒)
 3. **分片上传**: 分片信息有效期为 7 天
 4. **并发控制**: 同一对象的并发上传/删除需要应用层处理
-5. **.NET 10 SDK**: 云存储 SDK 需要等待官方支持
+5. **MinIO Multipart Upload**: MinioProvider 的分片上传通过临时对象模拟实现，不使用原生 S3 分片上传 API

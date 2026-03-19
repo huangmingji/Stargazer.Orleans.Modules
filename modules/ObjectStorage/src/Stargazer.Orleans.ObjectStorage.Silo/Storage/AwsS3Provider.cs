@@ -10,13 +10,37 @@ using StoragePartETag = Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Stor
 
 namespace Stargazer.Orleans.ObjectStorage.Silo.Storage;
 
+/// <summary>
+/// 亚马逊 AWS S3（Simple Storage Service）存储提供者。
+/// AWS S3 是 Amazon 提供的对象存储服务，具有高可用性、高扩展性和高持久性。
+/// </summary>
+/// <remarks>
+/// 支持的功能：
+/// - 多种存储类别（Standard、IA、Glacier 等）
+/// - 版本控制
+/// - 生命周期管理
+/// - 访问控制（ACL、IAM Policy）
+/// - 签名 URL 生成
+/// - 分片上传
+/// - 跨区域复制（CRR）
+/// 
+/// 配置项：
+/// - Region：AWS 区域（如 us-east-1）
+/// - AccessKeyId/SecretAccessKey：AWS 访问凭证
+/// - BucketName：默认存储桶名称
+/// </remarks>
 public class AwsS3Provider : IStorageProvider
 {
     private readonly IAmazonS3 _client;
     private readonly string _bucketName;
 
+    /// <inheritdoc />
     public string ProviderName => "aws";
 
+    /// <summary>
+    /// 初始化 AWS S3 存储提供者。
+    /// </summary>
+    /// <param name="settings">AWS 存储配置</param>
     public AwsS3Provider(AwsStorageSettings settings)
     {
         _bucketName = settings.BucketName;
@@ -27,12 +51,19 @@ public class AwsS3Provider : IStorageProvider
         _client = new AmazonS3Client(settings.AccessKeyId, settings.SecretAccessKey, config);
     }
 
+    /// <summary>
+    /// 初始化 AWS S3 存储提供者（使用注入的客户端）。
+    /// 适用于测试场景或需要自定义客户端配置的情况。
+    /// </summary>
+    /// <param name="settings">AWS 存储配置</param>
+    /// <param name="client">S3 客户端实例</param>
     public AwsS3Provider(AwsStorageSettings settings, IAmazonS3 client)
     {
         _bucketName = settings.BucketName;
         _client = client;
     }
 
+    /// <inheritdoc />
     public async Task<Stream> GetObjectAsync(string bucket, string key, CancellationToken cancellationToken = default)
     {
         var request = new GetObjectRequest
@@ -45,6 +76,7 @@ public class AwsS3Provider : IStorageProvider
         return response.ResponseStream;
     }
 
+    /// <inheritdoc />
     public async Task PutObjectAsync(string bucket, string key, Stream content, StorageMetadata metadata, CancellationToken cancellationToken = default)
     {
         var request = new PutObjectRequest
@@ -58,6 +90,7 @@ public class AwsS3Provider : IStorageProvider
         await _client.PutObjectAsync(request, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task DeleteObjectAsync(string bucket, string key, CancellationToken cancellationToken = default)
     {
         var request = new DeleteObjectRequest
@@ -69,6 +102,7 @@ public class AwsS3Provider : IStorageProvider
         await _client.DeleteObjectAsync(request, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<bool> ObjectExistsAsync(string bucket, string key, CancellationToken cancellationToken = default)
     {
         try
@@ -87,6 +121,7 @@ public class AwsS3Provider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task<StorageMetadata> GetObjectMetadataAsync(string bucket, string key, CancellationToken cancellationToken = default)
     {
         var request = new GetObjectMetadataRequest
@@ -109,6 +144,7 @@ public class AwsS3Provider : IStorageProvider
         };
     }
 
+    /// <inheritdoc />
     public async Task<List<ObjectInfo>> ListObjectsAsync(string bucket, string prefix, CancellationToken cancellationToken = default)
     {
         var request = new ListObjectsV2Request
@@ -129,6 +165,7 @@ public class AwsS3Provider : IStorageProvider
         }).ToList();
     }
 
+    /// <inheritdoc />
     public async Task CreateBucketAsync(string bucket, CancellationToken cancellationToken = default)
     {
         if (!await BucketExistsAsync(bucket, cancellationToken))
@@ -141,6 +178,7 @@ public class AwsS3Provider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task DeleteBucketAsync(string bucket, CancellationToken cancellationToken = default)
     {
         if (await BucketExistsAsync(bucket, cancellationToken))
@@ -153,12 +191,14 @@ public class AwsS3Provider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> BucketExistsAsync(string bucket, CancellationToken cancellationToken = default)
     {
         var response = await _client.ListBucketsAsync(cancellationToken);
         return response.Buckets.Any(b => b.BucketName == bucket);
     }
 
+    /// <inheritdoc />
     public async Task<string> GetSignedUrlAsync(string bucket, string key, TimeSpan expiry, HttpMethod method, CancellationToken cancellationToken = default)
     {
         var request = new GetPreSignedUrlRequest
@@ -172,6 +212,7 @@ public class AwsS3Provider : IStorageProvider
         return await _client.GetPreSignedURLAsync(request);
     }
 
+    /// <inheritdoc />
     public async Task<string> InitiateMultipartUploadAsync(string bucket, string key, StorageMetadata metadata, CancellationToken cancellationToken = default)
     {
         var request = new InitiateMultipartUploadRequest
@@ -185,6 +226,7 @@ public class AwsS3Provider : IStorageProvider
         return response.UploadId;
     }
 
+    /// <inheritdoc />
     public async Task<string> UploadPartAsync(string bucket, string key, string uploadId, int partNumber, Stream content, CancellationToken cancellationToken = default)
     {
         var request = new UploadPartRequest
@@ -200,6 +242,7 @@ public class AwsS3Provider : IStorageProvider
         return response.ETag;
     }
 
+    /// <inheritdoc />
     public async Task CompleteMultipartUploadAsync(string bucket, string key, string uploadId, List<StoragePartETag> parts, CancellationToken cancellationToken = default)
     {
         var request = new CompleteMultipartUploadRequest
@@ -213,6 +256,7 @@ public class AwsS3Provider : IStorageProvider
         await _client.CompleteMultipartUploadAsync(request, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task AbortMultipartUploadAsync(string bucket, string key, string uploadId, CancellationToken cancellationToken = default)
     {
         var request = new AbortMultipartUploadRequest

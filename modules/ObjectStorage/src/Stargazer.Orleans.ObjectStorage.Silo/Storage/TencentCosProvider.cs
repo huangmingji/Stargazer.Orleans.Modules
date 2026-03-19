@@ -14,13 +14,40 @@ using COSXML.Model.Tag;
 
 namespace Stargazer.Orleans.ObjectStorage.Silo.Storage;
 
+/// <summary>
+/// 腾讯云 COS（Cloud Object Storage）存储提供者。
+/// 腾讯云 COS 是腾讯云提供的对象存储服务，具有高可用、高可靠、强安全的特点。
+/// </summary>
+/// <remarks>
+/// 支持的功能：
+/// - 多种存储类型：标准存储、低频存储、归档存储、深度归档存储
+/// - 强大的数据处理能力（图片处理、音视频转码等）
+/// - 细粒度的权限控制（ACL、IAM、CAM）
+/// - 签名 URL 生成
+/// - 分片上传
+/// - 跨域访问控制（CORS）
+/// 
+/// 配置项：
+/// - Region：COS 地域（如 ap-guangzhou）
+/// - SecretId/SecretKey：云 API 密钥
+/// - BucketName：COS 存储桶名称（格式：{BucketName}-{AppId}）
+/// 
+/// 注意：
+/// - GetObject 和 PutObject 操作需要临时文件作为中转
+/// - 分片上传使用 UploadPart API，支持断点续传
+/// </remarks>
 public class TencentCosProvider : IStorageProvider
 {
     private readonly CosXml _cosXml;
     private readonly string _bucketName;
 
+    /// <inheritdoc />
     public string ProviderName => "tencent";
 
+    /// <summary>
+    /// 初始化腾讯云 COS 存储提供者。
+    /// </summary>
+    /// <param name="settings">腾讯云存储配置</param>
     public TencentCosProvider(TencentStorageSettings settings)
     {
         _bucketName = settings.BucketName;
@@ -38,12 +65,19 @@ public class TencentCosProvider : IStorageProvider
         _cosXml = new CosXmlServer(config, qCloudCredentialProvider);
     }
 
+    /// <summary>
+    /// 初始化腾讯云 COS 存储提供者（使用注入的客户端）。
+    /// 适用于测试场景或需要自定义客户端配置的情况。
+    /// </summary>
+    /// <param name="settings">腾讯云存储配置</param>
+    /// <param name="cosXml">COS XML 客户端实例</param>
     public TencentCosProvider(TencentStorageSettings settings, CosXml cosXml)
     {
         _bucketName = settings.BucketName;
         _cosXml = cosXml;
     }
 
+    /// <inheritdoc />
     public async Task<Stream> GetObjectAsync(string bucket, string key, CancellationToken cancellationToken = default)
     {
         var tempDir = Path.GetTempPath();
@@ -66,6 +100,7 @@ public class TencentCosProvider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task PutObjectAsync(string bucket, string key, Stream content, StorageMetadata metadata, CancellationToken cancellationToken = default)
     {
         var tempFile = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
@@ -90,12 +125,14 @@ public class TencentCosProvider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task DeleteObjectAsync(string bucket, string key, CancellationToken cancellationToken = default)
     {
         var request = new DeleteObjectRequest(bucket, key);
         await Task.Run(() => _cosXml.DeleteObject(request), cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<bool> ObjectExistsAsync(string bucket, string key, CancellationToken cancellationToken = default)
     {
         try
@@ -117,6 +154,7 @@ public class TencentCosProvider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task<StorageMetadata> GetObjectMetadataAsync(string bucket, string key, CancellationToken cancellationToken = default)
     {
         var tempDir = Path.GetTempPath();
@@ -154,6 +192,7 @@ public class TencentCosProvider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task<List<ObjectInfo>> ListObjectsAsync(string bucket, string prefix, CancellationToken cancellationToken = default)
     {
         var request = new GetBucketRequest(bucket);
@@ -183,6 +222,7 @@ public class TencentCosProvider : IStorageProvider
         return objectList;
     }
 
+    /// <inheritdoc />
     public async Task CreateBucketAsync(string bucket, CancellationToken cancellationToken = default)
     {
         if (!await BucketExistsAsync(bucket, cancellationToken))
@@ -192,6 +232,7 @@ public class TencentCosProvider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task DeleteBucketAsync(string bucket, CancellationToken cancellationToken = default)
     {
         if (await BucketExistsAsync(bucket, cancellationToken))
@@ -201,6 +242,7 @@ public class TencentCosProvider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public async Task<bool> BucketExistsAsync(string bucket, CancellationToken cancellationToken = default)
     {
         try
@@ -215,6 +257,7 @@ public class TencentCosProvider : IStorageProvider
         }
     }
 
+    /// <inheritdoc />
     public Task<string> GetSignedUrlAsync(string bucket, string key, TimeSpan expiry, HttpMethod method, CancellationToken cancellationToken = default)
     {
         var preSignatureStruct = new PreSignatureStruct
@@ -229,6 +272,7 @@ public class TencentCosProvider : IStorageProvider
         return Task.FromResult(url);
     }
 
+    /// <inheritdoc />
     public async Task<string> InitiateMultipartUploadAsync(string bucket, string key, StorageMetadata metadata, CancellationToken cancellationToken = default)
     {
         var request = new InitMultipartUploadRequest(bucket, key);
@@ -237,6 +281,7 @@ public class TencentCosProvider : IStorageProvider
         return result.initMultipartUpload.uploadId;
     }
 
+    /// <inheritdoc />
     public async Task<string> UploadPartAsync(string bucket, string key, string uploadId, int partNumber, Stream content, CancellationToken cancellationToken = default)
     {
         using var memoryStream = new MemoryStream();
@@ -249,6 +294,7 @@ public class TencentCosProvider : IStorageProvider
         return result.eTag;
     }
 
+    /// <inheritdoc />
     public async Task CompleteMultipartUploadAsync(string bucket, string key, string uploadId, List<StoragePartETag> parts, CancellationToken cancellationToken = default)
     {
         var request = new CompleteMultipartUploadRequest(bucket, key, uploadId);
@@ -261,6 +307,7 @@ public class TencentCosProvider : IStorageProvider
         await Task.Run(() => _cosXml.CompleteMultiUpload(request), cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task AbortMultipartUploadAsync(string bucket, string key, string uploadId, CancellationToken cancellationToken = default)
     {
         var request = new AbortMultipartUploadRequest(bucket, key, uploadId);
