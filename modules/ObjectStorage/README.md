@@ -388,6 +388,108 @@ modules/ObjectStorage/
 └── README.md
 ```
 
+## 单元测试
+
+ObjectStorage 模块包含完整的单元测试，涵盖配置、存储提供者、数据模型和 DTO。
+
+### 测试结构
+
+```
+modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests/
+├── Configuration/
+│   └── StorageSettingsTests.cs (8 tests)
+├── Storage/
+│   ├── LocalStorageProviderTests.cs (13 tests)
+│   └── StorageProviderFactoryTests.cs (3 tests)
+├── Domain/
+│   └── EntityTests.cs (8 tests)
+└── Dto/
+    └── DtoTests.cs (7 tests)
+```
+
+### 运行测试
+
+```bash
+# 运行所有测试
+dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests
+
+# 运行特定测试类
+dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests --filter "FullyQualifiedName~LocalStorageProviderTests"
+
+# 运行单个测试
+dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests --filter "FullyQualifiedName~LocalStorageProviderTests.FileExists_ReturnsFalseForNonExistentFile"
+
+# 查看详细输出
+dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests --verbosity normal
+```
+
+### 测试覆盖
+
+| 测试类 | 测试内容 |
+|--------|----------|
+| **StorageSettingsTests** | 配置解析、默认值、存储提供者创建 |
+| **LocalStorageProviderTests** | 文件读写、目录管理、存在性检查 |
+| **StorageProviderFactoryTests** | 工厂模式、未知提供者处理 |
+| **EntityTests** | Bucket、ObjectInfo、MultipartUpload、BucketPolicy 实体 |
+| **DtoTests** | DTO 属性映射和验证 |
+
+### 测试结果
+
+```
+Passed! - Failed: 0, Passed: 39, Skipped: 0, Total: 39
+```
+
+### 测试详情
+
+#### StorageSettingsTests (8 tests)
+- `DefaultExpiryMinutes_ReturnsCorrectValue` - 验证默认过期时间
+- `DefaultExpiryMinutes_Returns60WhenNotConfigured` - 验证未配置时的默认值
+- `MaxSignedUrlExpirySeconds_Returns7Days` - 验证最大签名 URL 过期时间
+- `MaxSignedUrlExpirySeconds_Returns604800` - 验证最大过期秒数
+- `MultipartUploadExpiryMinutes_Returns7Days` - 验证分片上传过期时间
+- `MultipartUploadExpiryMinutes_Returns10080WhenNotConfigured` - 验证默认值
+- `CreateStorageProvider_ThrowsForUnknownProvider` - 验证未知提供者抛出异常
+- `CreateStorageProvider_CreatesLocalProvider` - 验证本地提供者创建
+
+#### LocalStorageProviderTests (13 tests)
+- `FileExists_ReturnsTrueForExistingFile` - 验证已存在文件检测
+- `FileExists_ReturnsFalseForNonExistentFile` - 验证不存在文件检测
+- `UploadAsync_SavesFileToCorrectPath` - 验证文件上传路径
+- `UploadAsync_CreatesParentDirectories` - 验证父目录自动创建
+- `UploadAsync_StoresMetadata` - 验证元数据存储
+- `DownloadAsync_ReturnsFileContent` - 验证文件下载
+- `DeleteAsync_RemovesFile` - 验证文件删除
+- `GetSignedUrl_ReturnsUrl` - 验证签名 URL 生成
+- `ListObjectsAsync_ReturnsObjectList` - 验证对象列表
+- `DirectoryExists_ReturnsTrueForExistingDirectory` - 验证目录存在检查
+- `CreateDirectory_CreatesDirectory` - 验证目录创建
+- `DeleteDirectory_RemovesDirectory` - 验证目录删除
+- `GetStorageStats_ReturnsCorrectStats` - 验证存储统计
+
+#### StorageProviderFactoryTests (3 tests)
+- `CreateProvider_ReturnsLocalStorageProvider` - 验证返回本地存储提供者
+- `CreateProvider_ThrowsForUnknownProvider` - 验证未知提供者异常
+- `GetTypeName_ReturnsCorrectType` - 验证类型名称获取
+
+#### EntityTests (8 tests)
+- `Bucket_DefaultValues_AreCorrect` - 验证 Bucket 默认值
+- `Bucket_CanSetProperties` - 验证 Bucket 属性设置
+- `ObjectInfo_DefaultValues_AreCorrect` - 验证 ObjectInfo 默认值
+- `ObjectInfo_CanSetProperties` - 验证 ObjectInfo 属性设置
+- `MultipartUpload_DefaultValues_AreCorrect` - 验证 MultipartUpload 默认值
+- `MultipartUpload_CanSetProperties` - 验证 MultipartUpload 属性设置
+- `BucketPolicy_DefaultValues_AreCorrect` - 验证 BucketPolicy 默认值
+- `BucketPolicy_CanSetProperties` - 验证 BucketPolicy 属性设置
+
+#### DtoTests (7 tests)
+- `BucketDto_CanSetProperties` - 验证 BucketDto 属性设置
+- `ObjectMetadataDto_CanSetProperties` - 验证 ObjectMetadataDto 属性设置
+- `UploadResultDto_CanSetProperties` - 验证 UploadResultDto 属性设置
+- `SignedUrlDto_CanSetProperties` - 验证 SignedUrlDto 属性设置
+- `CreateBucketInputDto_CanSetProperties` - 验证 CreateBucketInputDto 属性设置
+- `CreateObjectInputDto_CanSetProperties` - 验证 CreateObjectInputDto 属性设置
+- `UpdateBucketInputDto_CanSetProperties` - 验证 UpdateBucketInputDto 属性设置
+
 ## 注意事项
 
 1. **删除存储桶**: 只有空存储桶才能被删除
