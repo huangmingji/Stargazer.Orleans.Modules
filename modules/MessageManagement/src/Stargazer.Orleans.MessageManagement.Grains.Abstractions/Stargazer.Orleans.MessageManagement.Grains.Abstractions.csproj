@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OrleansGenerateSerializers>true</OrleansGenerateSerializers>
+    <RootNamespace>Stargazer.Orleans.MessageManagement.Grains.Abstractions</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Orleans.Core.Abstractions" Version="9.2.1" />
+    <PackageReference Include="Stargazer.Common" Version="10.0.3" />
+  </ItemGroup>
+
+</Project>
+
