@@ -252,7 +252,7 @@ curl -X GET "http://localhost:5000/api/storage/object/{bucketId}/my-file.txt/sig
 }
 ```
 
-**注意**: 目前只有 `LocalStorageProvider` 可完全正常使用。其他云存储提供者 (Aliyun/AWS/Azure/Tencent/MinIO) 等待对应 SDK 支持 .NET 10 后可用。
+**注意**: `LocalStorageProvider`、`AliyunOssProvider`、`AwsS3Provider`、`AzureBlobProvider`、`TencentCosProvider` 已实现。`MinioProvider` 待 MinIO SDK 支持 .NET 10 后可用。
 
 ## 数据模型
 
