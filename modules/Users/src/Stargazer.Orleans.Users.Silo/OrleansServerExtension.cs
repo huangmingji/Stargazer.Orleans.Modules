@@ -19,42 +19,27 @@ public static class OrleansServerExtension
         builder.UseOrleans(siloBuilder =>
         {
             // 配置集群选项
-            siloBuilder.Configure<ClusterOptions>(options =>
+            siloBuilder.UseRedisClustering(configuration.GetConnectionString("Redis"))
+            .Configure<ClusterOptions>(options =>
             {
                 options.ClusterId = "users";
                 options.ServiceId = "orleans-app";
-            });
-
-            // 配置集群选项
-            // siloBuilder.UseRedisClustering(configuration.GetConnectionString("Redis"));
-
-            siloBuilder.UseAdoNetClustering(options =>
+            }).AddAdoNetGrainStorageAsDefault(options =>
             {
                 options.Invariant = "Npgsql";
                 options.ConnectionString = configuration.GetConnectionString("Users");
-            });
-
-            siloBuilder.AddAdoNetGrainStorageAsDefault(options =>
+            }).AddAdoNetGrainStorage("OrleansStore", options =>
             {
                 options.Invariant = "Npgsql";
                 options.ConnectionString = configuration.GetConnectionString("Users");
-            });
-            siloBuilder.AddAdoNetGrainStorage("OrleansStore", options =>
-            {
-                options.Invariant = "Npgsql";
-                options.ConnectionString = configuration.GetConnectionString("Users");
-            });
-
-            siloBuilder.Configure<EndpointOptions>(options =>
+            }).Configure<EndpointOptions>(options =>
             {
                 options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 11111);
                 options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 30000);
                 options.AdvertisedIPAddress = IPAddress.Loopback;
                 options.SiloPort = 11111;
                 options.GatewayPort = 30000;
-            });
-            // 配置日志，输出到控制台
-            siloBuilder.ConfigureLogging(logging => logging.AddConsole());
+            }).ConfigureLogging(logging => logging.AddConsole());
         });
         return builder;
     }

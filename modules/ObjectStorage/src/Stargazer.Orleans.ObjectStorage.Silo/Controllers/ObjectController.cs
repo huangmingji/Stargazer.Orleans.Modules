@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Dtos;
-using ResponseData = Stargazer.Orleans.Users.Grains.Abstractions.ResponseData;
+using ResponseData = Stargazer.Orleans.ObjectStorage.Grains.Abstractions.ResponseData;
 
 namespace Stargazer.Orleans.ObjectStorage.Silo.Controllers;
 
@@ -16,8 +16,6 @@ namespace Stargazer.Orleans.ObjectStorage.Silo.Controllers;
 [Authorize]
 public class ObjectController(IClusterClient client, ILogger<ObjectController> logger) : ControllerBase
 {
-    private readonly IClusterClient _client = client;
-
     /// <summary>
     /// 从 JWT Token 中获取当前用户 ID
     /// </summary>
@@ -42,7 +40,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     private async Task<bool> HasBucketAccessAsync(Guid bucketId, string action)
     {
         var userId = GetCurrentUserId();
-        var bucketGrain = _client.GetGrain<IBucketGrain>(0);
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
         return await bucketGrain.HasAccessPermissionAsync(bucketId, userId, action);
     }
 
@@ -63,7 +61,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         var stream = await objectGrain.DownloadAsync(bucketId, key, cancellationToken);
         
         if (stream == null)
@@ -94,7 +92,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         var exists = await objectGrain.ExistsAsync(bucketId, key, cancellationToken);
         
         if (!exists)
@@ -122,7 +120,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         var metadata = await objectGrain.GetMetadataAsync(bucketId, key, cancellationToken);
         
         if (metadata == null)
@@ -150,7 +148,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         var objects = await objectGrain.ListObjectsAsync(bucketId, prefix, cancellationToken);
         return Ok(ResponseData.Success(data: objects));
     }
@@ -180,7 +178,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
         }
 
         await using var stream = file.OpenReadStream();
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         
         var result = await objectGrain.UploadAsync(
             bucketId, 
@@ -218,7 +216,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
         }
 
         await using var stream = file.OpenReadStream();
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         
         var result = await objectGrain.UploadAsync(
             bucketId, 
@@ -248,7 +246,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         var result = await objectGrain.DeleteAsync(bucketId, key, cancellationToken);
         
         if (!result)
@@ -284,7 +282,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return BadRequest(ResponseData.Fail(code: "invalid_expiry", message: "Expiry cannot exceed 7 days."));
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         var result = await objectGrain.GetSignedUrlAsync(bucketId, key, expiry, method, cancellationToken);
         return Ok(ResponseData.Success(data: result));
     }
@@ -308,7 +306,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         var result = await objectGrain.InitiateMultipartUploadAsync(bucketId, key, request.ContentType, request.Metadata, cancellationToken);
         return Ok(ResponseData.Success(data: result));
     }
@@ -339,7 +337,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
         }
 
         await using var stream = file.OpenReadStream();
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         
         var result = await objectGrain.UploadPartAsync(bucketId, key, uploadId, partNumber, stream, cancellationToken);
         return Ok(ResponseData.Success(data: result));
@@ -364,7 +362,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         
         try
         {
@@ -395,7 +393,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = _client.GetGrain<IObjectGrain>(0);
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
         await objectGrain.AbortMultipartUploadAsync(bucketId, key, uploadId, cancellationToken);
         return Ok(ResponseData.Success(data: true));
     }

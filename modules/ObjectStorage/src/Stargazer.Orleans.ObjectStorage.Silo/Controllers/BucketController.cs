@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Dtos;
-using ResponseData = Stargazer.Orleans.Users.Grains.Abstractions.ResponseData;
+using ResponseData = Stargazer.Orleans.ObjectStorage.Grains.Abstractions.ResponseData;
 
 namespace Stargazer.Orleans.ObjectStorage.Silo.Controllers;
 
@@ -16,8 +16,6 @@ namespace Stargazer.Orleans.ObjectStorage.Silo.Controllers;
 [Authorize]
 public class BucketController(IClusterClient client, ILogger<BucketController> logger) : ControllerBase
 {
-    private readonly IClusterClient _client = client;
-
     /// <summary>
     /// 从 JWT Token 中获取当前用户 ID
     /// </summary>
@@ -43,7 +41,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     [Authorize(policy: "permission:storage.bucket.view")]
     public async Task<IActionResult> GetBucket(Guid id, CancellationToken cancellationToken = default)
     {
-        var bucketGrain = _client.GetGrain<IBucketGrain>(0);
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
         var bucket = await bucketGrain.GetBucketAsync(id, cancellationToken);
         
         if (bucket == null)
@@ -64,7 +62,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     [Authorize(policy: "permission:storage.bucket.view")]
     public async Task<IActionResult> GetBucketByName(string name, CancellationToken cancellationToken = default)
     {
-        var bucketGrain = _client.GetGrain<IBucketGrain>(0);
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
         var bucket = await bucketGrain.GetBucketByNameAsync(name, cancellationToken);
         
         if (bucket == null)
@@ -85,7 +83,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     public async Task<IActionResult> GetUserBuckets(CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
-        var bucketGrain = _client.GetGrain<IBucketGrain>(0);
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
         var buckets = await bucketGrain.GetUserBucketsAsync(userId, cancellationToken);
         return Ok(ResponseData.Success(data: buckets));
     }
@@ -105,7 +103,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
         try
         {
             bucket.OwnerId = userId;
-            var bucketGrain = _client.GetGrain<IBucketGrain>(0);
+            var bucketGrain = client.GetGrain<IBucketGrain>(0);
             var created = await bucketGrain.CreateBucketAsync(bucket, cancellationToken);
             return CreatedAtAction(nameof(GetBucket), new { id = created.Id }, ResponseData.Success(data: created));
         }
@@ -127,7 +125,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     public async Task<IActionResult> UpdateBucket(Guid id, [FromBody] BucketDto bucket, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
-        var bucketGrain = _client.GetGrain<IBucketGrain>(0);
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
         
         var hasAccess = await bucketGrain.HasAccessPermissionAsync(id, userId, "Write", cancellationToken);
         if (!hasAccess)
@@ -158,7 +156,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     public async Task<IActionResult> DeleteBucket(Guid id, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
-        var bucketGrain = _client.GetGrain<IBucketGrain>(0);
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
         
         var hasAccess = await bucketGrain.HasAccessPermissionAsync(id, userId, "Write", cancellationToken);
         if (!hasAccess)
@@ -193,7 +191,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     public async Task<IActionResult> CheckAccess(Guid id, [FromQuery] string action, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
-        var bucketGrain = _client.GetGrain<IBucketGrain>(0);
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
         var hasAccess = await bucketGrain.HasAccessPermissionAsync(id, userId, action, cancellationToken);
         return Ok(ResponseData.Success(data: hasAccess));
     }

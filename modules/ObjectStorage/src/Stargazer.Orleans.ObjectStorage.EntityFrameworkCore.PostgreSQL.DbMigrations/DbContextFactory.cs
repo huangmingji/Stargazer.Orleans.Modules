@@ -11,8 +11,8 @@ public class DbContextFactory : IDesignTimeDbContextFactory<EfDbMigrationsContex
         var configuration = BuildConfiguration();
 
         var builder = new DbContextOptionsBuilder<EfDbMigrationsContext>()
-            .UseNpgsql(configuration.GetConnectionString("Users"), 
-                b=> b.MigrationsAssembly("Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations"));
+            .UseNpgsql(configuration.GetConnectionString("ObjectStorage"), 
+                b=> b.MigrationsAssembly("Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations"));
 
         return new EfDbMigrationsContext(builder.Options);
     }

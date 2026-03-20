@@ -5,6 +5,8 @@ using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
 using Stargazer.Common.Extend;
+using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
+using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.MessageManagement.Silo;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,16 +34,16 @@ builder.Services.AddOpenApi(options =>
     {
         document.Info = new()
         {
-            Title = "Stargazer Orleans API",
+            Title = "Stargazer Message API",
             Version = "v1",
-            Description = "Stargazer Orleans API"
+            Description = "Stargazer Message API"
         };
         return Task.CompletedTask;
     });
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
-// builder.Services.UseEntityFramworkCore()
-//     .MigrateDatabase();
+builder.Services.UseEntityFramworkCore().MigrateDatabase();
+
 builder.Services.AddControllers().AddNewtonsoftJson(
     op =>
     {
@@ -58,7 +60,7 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options =>
-        options.WithTitle("Stargazer Orleans API")
+        options.WithTitle("Stargazer Message API")
             .AddPreferredSecuritySchemes(JwtBearerDefaults.AuthenticationScheme)
             .AddHttpAuthentication(JwtBearerDefaults.AuthenticationScheme, auth => { auth.Token = ""; })
     );

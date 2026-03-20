@@ -1,7 +1,7 @@
 using System.Net;
 using Microsoft.Extensions.Logging;
 
-namespace Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL;
+namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
 
 public class EntityNotFoundException(string message = null, string details = null, Exception innerException = null)
     : Exception(message: message, innerException: innerException)

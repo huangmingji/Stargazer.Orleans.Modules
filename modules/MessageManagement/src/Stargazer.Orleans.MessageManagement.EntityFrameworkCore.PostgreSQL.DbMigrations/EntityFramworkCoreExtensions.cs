@@ -11,7 +11,7 @@ public static class EntityFramworkCoreExtensions
         IConfiguration? configuration = serviceCollection.BuildServiceProvider().GetService<IConfiguration>();
         serviceCollection.AddDbContextFactory<EfDbMigrationsContext>(options =>
         {
-            options.UseNpgsql(configuration?.GetConnectionString("Default"));
+            options.UseNpgsql(configuration?.GetConnectionString("Message"));
         }, ServiceLifetime.Scoped);
         serviceCollection.BuildServiceProvider().GetService<EfDbMigrationsContext>()?.Database.Migrate();
     }
