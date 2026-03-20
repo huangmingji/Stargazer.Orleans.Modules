@@ -1,5 +1,14 @@
 using System.Net;
+using Microsoft.EntityFrameworkCore;
 using Orleans.Configuration;
+using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
+using Stargazer.Orleans.MessageManagement.Grains.Configuration;
+using Stargazer.Orleans.MessageManagement.Grains.Senders.Email;
+using Stargazer.Orleans.MessageManagement.Grains.Senders.Push;
+using Stargazer.Orleans.MessageManagement.Grains.Senders.Sms;
+using IEmailSender = Stargazer.Orleans.MessageManagement.Grains.Senders.Email.IEmailSender;
+using ISmsSender = Stargazer.Orleans.MessageManagement.Grains.Senders.Sms.ISmsSender;
+using IPushSender = Stargazer.Orleans.MessageManagement.Grains.Senders.Push.IPushSender;
 
 namespace Stargazer.Orleans.MessageManagement.Silo;
 
@@ -13,9 +22,20 @@ public static class OrleansServerExtension
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
             .Build();
         
+        var messageSettings = new MessageSettings();
+        configuration.GetSection("Message").Bind(messageSettings);
+        
+        builder.Services.AddSingleton(messageSettings);
+        builder.Services.AddSingleton(messageSettings.Email);
+        builder.Services.AddSingleton(messageSettings.Sms);
+        builder.Services.AddSingleton(messageSettings.Push);
+
+        builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
+        builder.Services.AddScoped<ISmsSender, SmsSenderFactory>();
+        builder.Services.AddScoped<IPushSender, PushSenderFactory>();
+
         builder.UseOrleans(siloBuilder =>
         {
-            // 配置集群选项
             siloBuilder.UseRedisClustering(configuration.GetConnectionString("Redis"))
             .Configure<ClusterOptions>(options =>
             {

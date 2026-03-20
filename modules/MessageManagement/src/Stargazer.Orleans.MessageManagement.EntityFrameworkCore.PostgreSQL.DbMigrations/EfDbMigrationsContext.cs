@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using Stargazer.Orleans.MessageManagement.Domain;
 
 namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbMigrations
 {
     public class EfDbMigrationsContext(DbContextOptions<EfDbMigrationsContext> options) : DbContext(options)
     {
+        public DbSet<MessageRecord> MessageRecords => Set<MessageRecord>();
+        public DbSet<MessageTemplate> MessageTemplates => Set<MessageTemplate>();
+        public DbSet<ProviderConfig> ProviderConfigs => Set<ProviderConfig>();
 
         /// <summary>
         /// On the model creating.
@@ -13,15 +17,6 @@ namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbM
         {
             modelBuilder.Configure();
             base.OnModelCreating(modelBuilder);
-            // foreach (var entityType in  new List<Type>() {typeof(Entity<>) })
-            // {
-            //     var assembly = Assembly.GetAssembly(entityType) ?? throw new NullReferenceException();
-            //     var types  = assembly.DefinedTypes.AsEnumerable().Where(x => x.BaseType != null && (x.BaseType == entityType)).ToList();
-            //     foreach (var type in types)
-            //     {
-            //         modelBuilder.Entity(type);
-            //     }
-            // }
         }
     }
 }

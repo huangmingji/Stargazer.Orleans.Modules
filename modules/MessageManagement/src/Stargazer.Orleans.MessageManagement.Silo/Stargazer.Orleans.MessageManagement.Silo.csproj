@@ -10,6 +10,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.0" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.11.5" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
@@ -26,6 +28,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\aspire\Stargazer.ServiceDefaults\Stargazer.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbMigrations\Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbMigrations.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.MessageManagement.Grains.Abstractions\Stargazer.Orleans.MessageManagement.Grains.Abstractions.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.MessageManagement.Grains\Stargazer.Orleans.MessageManagement.Grains.csproj" />

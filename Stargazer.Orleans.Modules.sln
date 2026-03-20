@@ -58,6 +58,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.Users.Tests", "modules\Users\tests\Stargazer.Orleans.Users.Tests\Stargazer.Orleans.Users.Tests.csproj", "{14390F14-BD9E-4B14-B488-22769B305B83}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MessageManagement", "MessageManagement", "{CEE3D027-0FC9-6868-4FD1-920FA1AE6C69}"
+	ProjectSection(SolutionItems) = preProject
+		modules\MessageManagement\README.md = modules\MessageManagement\README.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{259308EA-B3E8-263C-DF4D-4C4360FE80F3}"
 EndProject

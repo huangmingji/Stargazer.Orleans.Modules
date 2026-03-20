@@ -12,7 +12,7 @@ public class DbContextFactory : IDesignTimeDbContextFactory<EfDbMigrationsContex
 
         var builder = new DbContextOptionsBuilder<EfDbMigrationsContext>()
             .UseNpgsql(configuration.GetConnectionString("Message"), 
-                b=> b.MigrationsAssembly("Stargazer.Orleans.MessageManagement.EntityFrameworkCore.DbMigrations"));
+                b=> b.MigrationsAssembly("Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbMigrations"));
 
         return new EfDbMigrationsContext(builder.Options);
     }
