@@ -14,7 +14,7 @@ public sealed class PermissionData : Entity<Guid>
     
     public bool IsActive { get; set; } = true;
     
-    public List<Stargazer.Orleans.Users.Domain.Roles.RoleData> Roles { get; set; } = new();
+    public List<Roles.RolePermissionData> RolePermissions { get; set; } = new();
 }
 
 public enum PermissionType

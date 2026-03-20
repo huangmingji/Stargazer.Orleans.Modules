@@ -1,11 +1,18 @@
 using Microsoft.EntityFrameworkCore;
+using Stargazer.Orleans.Users.Domain.Permissions;
+using Stargazer.Orleans.Users.Domain.Roles;
+using Stargazer.Orleans.Users.Domain.UserRoles;
 using Stargazer.Orleans.Users.Domain.Users;
 
 namespace Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations
 {
     public class EfDbMigrationsContext(DbContextOptions options) : DbContext(options)
     {
-        private DbSet<UserData> UserDatas {get;set;}
+        public DbSet<UserData> UserDatas { get; set; }
+        public DbSet<UserRoleData> UserRoles { get; set; }
+        public DbSet<RoleData> RoleDatas { get; set; }
+        public DbSet<RolePermissionData> RolePermissions { get; set; }
+        public DbSet<PermissionData> PermissionDatas { get; set; }
 
         /// <summary>
         /// On the model creating.

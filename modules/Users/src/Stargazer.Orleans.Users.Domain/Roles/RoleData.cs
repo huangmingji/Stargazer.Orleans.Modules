@@ -12,7 +12,7 @@ public sealed class RoleData : Entity<Guid>
     
     public bool IsActive { get; set; } = true;
     
-    public List<Permissions.PermissionData> Permissions { get; set; } = new();
-    
     public List<UserRoles.UserRoleData> UserRoles { get; set; } = new();
+    
+    public List<RolePermissionData> RolePermissions { get; set; } = new();
 }

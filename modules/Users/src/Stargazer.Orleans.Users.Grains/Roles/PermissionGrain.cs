@@ -14,7 +14,8 @@ namespace Stargazer.Orleans.Users.Grains.Roles;
 [StatelessWorker]
 public class PermissionGrain(
     IRepository<PermissionData, Guid> permissionRepository,
-    IRepository<RoleData, Guid> roleRepository) : Grain, IPermissionGrain
+    IRepository<RoleData, Guid> roleRepository,
+    IRepository<RolePermissionData, Guid> rolePermissionRepository) : Grain, IPermissionGrain
 {
     public async Task<PermissionDataDto?> GetPermissionAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -101,11 +102,10 @@ public class PermissionGrain(
         var permission = await permissionRepository.FindAsync(id, cancellationToken);
         if (permission is null) return false;
         
-        var roles = await roleRepository.FindListAsync(x => x.Permissions.Any(p => p.Id == id), cancellationToken);
-        foreach (var role in roles)
+        var rolePermissions = await rolePermissionRepository.FindListAsync(x => x.PermissionId == id, cancellationToken);
+        if (rolePermissions.Any())
         {
-            role.Permissions.Remove(permission);
-            await roleRepository.UpdateAsync(role, cancellationToken);
+            await rolePermissionRepository.DeleteManyAsync(rolePermissions.Select(x => x.Id), cancellationToken);
         }
         
         await permissionRepository.DeleteAsync(id, cancellationToken);

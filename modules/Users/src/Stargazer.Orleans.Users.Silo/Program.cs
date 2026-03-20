@@ -80,8 +80,6 @@ builder.Services.AddOpenApi(options =>
     });
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
-// builder.Services.UseEntityFramworkCore()
-//     .MigrateDatabase();
 builder.Services.AddControllers().AddNewtonsoftJson(
     op =>
     {

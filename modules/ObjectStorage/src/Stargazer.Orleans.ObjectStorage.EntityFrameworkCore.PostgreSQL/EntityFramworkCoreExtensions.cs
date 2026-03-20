@@ -6,7 +6,7 @@ namespace Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL;
 
 public static class EntityFramworkCoreExtensions
 {
-    public static IServiceCollection UseObjectStorageEntityFramworkCore(this IServiceCollection serviceCollection)
+    public static IServiceCollection UseEntityFramworkCore(this IServiceCollection serviceCollection)
     {
         IConfiguration? configuration = serviceCollection.BuildServiceProvider().GetService<IConfiguration>();
         serviceCollection.AddScoped<DbContext,EfDbContext>();

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
 using Stargazer.Common;
 using Stargazer.Common.SequentialGuid;
+using Stargazer.Orleans.Users.Domain.Permissions;
 using Stargazer.Orleans.Users.Domain.Roles;
 using Stargazer.Orleans.Users.Domain.UserRoles;
 using Stargazer.Orleans.Users.Domain.Users;
@@ -20,6 +21,8 @@ public class UserGrain(
     IRepository<UserData, Guid> userRepository,
     IRepository<UserRoleData, Guid> userRoleRepository,
     IRepository<RoleData, Guid> roleRepository,
+    IRepository<RolePermissionData, Guid> rolePermissionRepository,
+    IRepository<PermissionData, Guid> permissionRepository,
     ILogger<UserGrain> logger) : Grain, IUserGrain
 {
     public async Task ChangePasswordAsync(Guid id, ChangePasswordInputDto input, Guid modifierId,
@@ -268,9 +271,19 @@ public class UserGrain(
         var userRoles = await userRoleRepository.FindListAsync(x => x.UserId == userId && x.IsActive, cancellationToken);
         var roleIds = userRoles.Select(x => x.RoleId).ToList();
         
-        var roles = await roleRepository.FindListAsync(x => roleIds.Contains(x.Id) && x.IsActive, cancellationToken);
+        if (!roleIds.Any())
+            return false;
         
-        return roles.Any(role => role.Permissions.Any(p => p.Code == permissionCode && p.IsActive));
+        var rolePermissions = await rolePermissionRepository.FindListAsync(
+            x => roleIds.Contains(x.RoleId), 
+            cancellationToken: cancellationToken);
+        var rolePermissionIds = rolePermissions.Select(x => x.PermissionId).ToList();
+        
+        var permission = await permissionRepository.FindAsync(
+            x => rolePermissionIds.Contains(x.Id) && x.Code == permissionCode && x.IsActive, 
+            cancellationToken);
+        
+        return permission is not null;
     }
 
     public async Task<List<PermissionDataDto>> GetUserPermissionsAsync(Guid userId, CancellationToken cancellationToken = default)
@@ -278,9 +291,18 @@ public class UserGrain(
         var userRoles = await userRoleRepository.FindListAsync(x => x.UserId == userId && x.IsActive, cancellationToken);
         var roleIds = userRoles.Select(x => x.RoleId).ToList();
         
-        var roles = await roleRepository.FindListAsync(x => roleIds.Contains(x.Id) && x.IsActive, cancellationToken);
+        if (!roleIds.Any())
+            return new List<PermissionDataDto>();
         
-        var permissions = roles.SelectMany(x => x.Permissions).DistinctBy(p => p.Id).Where(p => p.IsActive).ToList();
+        var rolePermissions = await rolePermissionRepository.FindListAsync(
+            x => roleIds.Contains(x.RoleId), 
+            cancellationToken: cancellationToken);
+        var permissionIds = rolePermissions.Select(x => x.PermissionId).Distinct().ToList();
+        
+        var permissions = await permissionRepository.FindListAsync(
+            x => permissionIds.Contains(x.Id) && x.IsActive, 
+            cancellationToken: cancellationToken);
+        
         return permissions.Select(x => x.MapToPermissionDto()).ToList();
     }
 }

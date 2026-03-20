@@ -25,6 +25,8 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
     .CreateLogger();
 
+builder.Services.UseEntityFramworkCore().MigrateDatabase();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
@@ -42,7 +44,6 @@ builder.Services.AddOpenApi(options =>
     });
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
-builder.Services.UseObjectStorageEntityFramworkCore().MigrateDatabase();
 
 builder.Services.AddControllers().AddNewtonsoftJson(
     op =>
