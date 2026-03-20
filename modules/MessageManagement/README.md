@@ -19,12 +19,159 @@
 Stargazer.Orleans.MessageManagement/
 ├── src/
 │   ├── Stargazer.Orleans.MessageManagement.Domain/          # 领域实体
-│   ├── Stargazer.Orleans.MessageManagement.Grains/         # Grain 实现
+│   ├── Stargazer.Orleans.MessageManagement.Grains/         # Grain 实现 + Senders
 │   ├── Stargazer.Orleans.MessageManagement.Grains.Abstractions/  # 接口和 DTO
 │   ├── Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL/  # EF Core 持久化
 │   └── Stargazer.Orleans.MessageManagement.Silo/            # API 控制器和配置
 └── tests/
 ```
+
+## 架构设计
+
+### 分层架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              API Layer (Silo)                               │
+│  MessageController  ───  TemplateController                                 │
+│  接收 HTTP 请求，调用 Orleans Grain                                           │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │ IClusterClient.GetGrain<IMessageGrain>()
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     Application Layer (Grains.Abstractions)                 │
+│  IMessageGrain  ───  ITemplateGrain                                         │
+│  定义业务接口和数据传输对象                                                     │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          Business Layer (Grains)                            │
+│  MessageGrain  ───  TemplateGrain  ───  Sender Factories                    │
+│  核心业务逻辑：消息发送、模板管理、Provider 路由                                  │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  Senders/                                                           │    │
+│  │  ├── Email/    (SmtpEmailSender)                                    │    │
+│  │  ├── Sms/     (Aliyun/Tencent/Huawei/Ctyun Senders)                 │    │
+│  │  └── Push/    (JPush/Umeng - 预留)                                   │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          Domain Layer                                       │
+│  MessageRecord  ───  MessageTemplate  ───  ProviderConfig                   │
+│  核心业务实体：消息记录、模板、Provider 配置                                      │
+└───────────────────────────────┬─────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       Infrastructure Layer                                  │
+│  Repository  ───  EF Core DbContext  ───  PostgreSQL                        │
+│  数据持久化基础设施                                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 消息发送流程
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 1. API 请求                                                                   │
+│    POST /api/message/send                                                    │
+│    → MessageController                                                       │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 2. Grain 调用                                                                 │
+│    → MessageGrain.SendAsync()                                                │
+│    → 创建 MessageRecord，插入数据库                                             │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 3. 模板渲染 (可选)                                                             │
+│    → 根据 templateCode 查询模板                                                │
+│    → 渲染 {{variable}} 占位符                                                  │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 4. Provider 路由                                                              │
+│    → SmsSenderFactory / PushSenderFactory                                    │
+│    → 根据 Provider 名称或默认配置选择 Provider                                   │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 5. Provider 发送                                                              │
+│    → AliyunSmsSender (SDK)                                                   │
+│    → TencentSmsSender (SDK)                                                  │
+│    → HuaweiSmsSender (HTTP API)                                              │
+│    → CtyunSmsSender (HTTP API)                                               │
+│    → SmtpEmailSender (MailKit)                                               │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ 6. 结果更新                                                                   │
+│    → 更新 MessageRecord 状态 (Sent/Failed)                                    │
+│    → 记录外部消息 ID 或失败原因                                                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 设计模式
+
+| 模式 | 实现 | 用途 |
+|------|------|------|
+| Strategy | `ISmsSender`, `IEmailSender`, `IPushSender` | 可互换的 Provider 算法 |
+| Factory | `SmsSenderFactory`, `PushSenderFactory` | Provider 实例化 |
+| Dependency Injection | Grain 构造函数注入 | 松耦合 |
+| Repository | `IRepository<T, K>` | 数据访问抽象 |
+| DTO/Projection | `MessageRecordDto`, `SendMessageInputDto` | API 契约 |
+
+### Orleans 特性使用
+
+| 特性 | 使用位置 | 用途 |
+|------|----------|------|
+| `[StatelessWorker]` | `MessageGrain`, `TemplateGrain` | 无状态 Grain，可在任意 Silo 运行 |
+| `IGrainWithGuidKey` | `IMessageGrain`, `ITemplateGrain` | Grain 身份标识类型 |
+| AdoNet Grain Storage | PostgreSQL | Grain 状态持久化 |
+| Redis Clustering | `appsettings.json` | 分布式 Grain 激活 |
+
+### 配置层次结构
+
+```
+appsettings.json
+└── MessageSettings
+    ├── EmailSettings
+    │   ├── DefaultProvider: "smtp"
+    │   └── SmtpSettings (Host, Port, Username, Password, From)
+    │
+    ├── SmsSettings
+    │   ├── DefaultProvider: "aliyun"
+    │   ├── AliyunSmsSettings (AccessKeyId, AccessKeySecret, SignName)
+    │   ├── TencentSmsSettings (SecretId, SecretKey, SdkAppId, Region)
+    │   ├── HuaweiSmsSettings (Ak, Sk, Sender, Endpoint)
+    │   └── CtyunSmsSettings (AccessKeyId, AccessKeySecret, Signature)
+    │
+    └── PushSettings
+        ├── DefaultProvider: "jpush"
+        ├── JPushSettings (AppKey, MasterSecret)
+        └── UmengSettings (AppKey, AppMasterSecret)
+```
+
+### Provider 实现对比
+
+| Provider | 类型 | SDK/API | 认证方式 |
+|----------|------|---------|----------|
+| SMTP | Email | MailKit | Username/Password |
+| 阿里云 | SMS | AlibabaCloud SDK | AccessKey |
+| 腾讯云 | SMS | TencentCloud SDK 3.0 | SecretId/SecretKey |
+| 华为云 | SMS | HTTP API | WSSE |
+| 天翼云 | SMS | HTTP API | HMAC-SHA256 |
+| 极光推送 | Push | - | - (预留) |
+| 友盟推送 | Push | - | - (预留) |
 
 ## 支持的消息通道
 
@@ -454,8 +601,24 @@ public class NewSmsSender : ISmsSender
 
 ## 注意事项
 
+### 已实现功能
+
 1. **SMS Provider**：所有 SMS Provider（阿里云、腾讯云、华为云、天翼云）均已实现
-2. **Push Provider**：极光推送和友盟推送接口预留，待实现
-3. **定时发送**：定时消息需要在定时时间到达后被消费，建议配合后台任务或调度器使用
-4. **重试机制**：目前仅支持手动重试，可根据需求扩展自动重试
-5. **华为云 SMS**：使用 HTTP API 调用，需要配置 AK/SK 和 Sender（短信签名通道号）
+2. **Email Provider**：SMTP 邮件发送已实现（MailKit）
+3. **模板管理**：支持 `{{variable}}` 占位符渲染
+4. **批量发送**：支持批量发送消息
+5. **消息记录**：完整的发送历史记录
+
+### 待实现功能
+
+1. **Push Provider**：极光推送和友盟推送接口预留，待实现
+2. **定时消息消费**：定时消息需要在定时时间到达后被消费，需配合后台调度器
+3. **自动重试**：目前仅支持手动重试，可扩展自动重试机制
+4. **Provider 健康检查**：暂无自动故障转移
+5. **限流控制**：暂无内置限流
+
+### 技术选型说明
+
+1. **华为云 SMS**：使用 HTTP API（WSSE 认证），而非 SDK（SDK 仅提供管理 API）
+2. **天翼云 SMS**：使用 HTTP API（HMAC-SHA256 认证）
+3. **手机号处理**：所有 SMS Provider 自动处理中国手机号格式（支持 `138xxxx`、`+86138xxx`、`86138xxx`）
