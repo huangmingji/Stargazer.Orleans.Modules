@@ -28,15 +28,15 @@ Stargazer.Orleans.MessageManagement/
 
 ## 支持的消息通道
 
-| 通道 | Provider | 状态 |
-|------|----------|------|
-| Email | SMTP | 已实现 |
-| SMS | 阿里云 | Stub（待实现） |
-| SMS | 腾讯云 | Stub（待实现） |
-| SMS | 华为云 | Stub（待实现） |
-| SMS | 天翼云 | 已实现 |
-| Push | 极光推送 | 预留接口 |
-| Push | 友盟推送 | 预留接口 |
+| 通道 | Provider | 状态 | SDK/实现方式 |
+|------|----------|------|--------------|
+| Email | SMTP | ✅ 已实现 | MailKit |
+| SMS | 阿里云 | ✅ 已实现 | AlibabaCloud SDK |
+| SMS | 腾讯云 | ✅ 已实现 | TencentCloud SDK 3.0 |
+| SMS | 华为云 | ✅ 已实现 | HTTP API (WSSE认证) |
+| SMS | 天翼云 | ✅ 已实现 | HTTP API |
+| Push | 极光推送 | 🔧 预留接口 | - |
+| Push | 友盟推送 | 🔧 预留接口 | - |
 
 ## API 接口
 
@@ -176,21 +176,23 @@ Stargazer.Orleans.MessageManagement/
         "Endpoint": "dysmsapi.aliyuncs.com"
       },
       "Tencent": {
-        "AppId": 0,
-        "AppKey": "",
-        "TemplateId": "",
-        "SmsSign": ""
+        "SecretId": "your-secret-id",
+        "SecretKey": "your-secret-key",
+        "SdkAppId": "your-sdk-app-id",
+        "TemplateId": "your-template-id",
+        "SmsSign": "签名内容",
+        "Region": "ap-guangzhou"
       },
       "Huawei": {
-        "Ak": "",
-        "Sk": "",
-        "Sender": "",
+        "Ak": "your-access-key",
+        "Sk": "your-secret-key",
+        "Sender": "短信签名通道号",
         "Endpoint": "https://msgsms.cn-north-4.myhuaweicloud.com"
       },
       "Ctyun": {
-        "AccessKeyId": "",
-        "AccessKeySecret": "",
-        "Signature": "",
+        "AccessKeyId": "your-access-key-id",
+        "AccessKeySecret": "your-access-key-secret",
+        "Signature": "签名名称",
         "RequestUrl": "https://sms-global.ctapi.ctyun.cn/sms/api/v1"
       }
     },
@@ -369,7 +371,7 @@ Content-Type: application/json
 3. 在 `MessageSettings.cs` 中添加对应的配置类
 4. 在 `appsettings.json` 中添加配置项
 
-示例：
+示例（SDK 方式）：
 
 ```csharp
 public class NewSmsSender : ISmsSender
@@ -388,6 +390,43 @@ public class NewSmsSender : ISmsSender
     // 其他方法...
 }
 ```
+
+示例（HTTP API 方式）：
+
+参考 `HuaweiSmsSender.cs` 或 `CtyunSmsSender.cs`，使用 HttpClient 调用第三方 HTTP API。
+
+## SMS Provider 详解
+
+### 阿里云短信
+
+- 使用 AlibabaCloud SDK
+- 需要配置：AccessKeyId、AccessKeySecret、SignName（签名名称）
+- Endpoint 默认：`dysmsapi.aliyuncs.com`
+
+### 腾讯云短信
+
+- 使用 TencentCloud SDK 3.0
+- 需要配置：SecretId、SecretKey、SdkAppId、TemplateId、SmsSign
+- Region 默认：`ap-guangzhou`
+
+### 华为云短信
+
+- 使用 HTTP API，WSSE 认证
+- 需要配置：Ak（Access Key）、Sk（Secret Key）、Sender（短信签名通道号）
+- Endpoint 默认：`https://msgsms.cn-north-4.myhuaweicloud.com`
+
+### 天翼云短信
+
+- 使用 HTTP API，HMAC-SHA256 签名认证
+- 需要配置：AccessKeyId、AccessKeySecret、Signature（签名名称）
+- RequestUrl 默认：`https://sms-global.ctapi.ctyun.cn/sms/api/v1`
+
+### 手机号格式
+
+所有 SMS Provider 支持以下手机号格式：
+- `13800138000` → 自动转换为 `+8613800138000`
+- `8613800138000` → 自动转换为 `+8613800138000`
+- `+8613800138000` → 保持不变
 
 ### 消息模板变量渲染
 
@@ -415,7 +454,8 @@ public class NewSmsSender : ISmsSender
 
 ## 注意事项
 
-1. **SMS Provider**：阿里云、腾讯云、华为云 SDK 待集成，目前为 Stub 实现
-2. **Push Provider**：极光推送和友盟推送接口预留待实现
+1. **SMS Provider**：所有 SMS Provider（阿里云、腾讯云、华为云、天翼云）均已实现
+2. **Push Provider**：极光推送和友盟推送接口预留，待实现
 3. **定时发送**：定时消息需要在定时时间到达后被消费，建议配合后台任务或调度器使用
 4. **重试机制**：目前仅支持手动重试，可根据需求扩展自动重试
+5. **华为云 SMS**：使用 HTTP API 调用，需要配置 AK/SK 和 Sender（短信签名通道号）
