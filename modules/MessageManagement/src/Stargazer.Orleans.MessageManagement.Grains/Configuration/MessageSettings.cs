@@ -62,10 +62,12 @@ public class AliyunSmsSettings
 /// </summary>
 public class TencentSmsSettings
 {
-    public int AppId { get; set; }
-    public string AppKey { get; set; } = string.Empty;
+    public string SecretId { get; set; } = string.Empty;
+    public string SecretKey { get; set; } = string.Empty;
+    public string SdkAppId { get; set; } = string.Empty;
     public string TemplateId { get; set; } = string.Empty;
     public string SmsSign { get; set; } = string.Empty;
+    public string Region { get; set; } = "ap-guangzhou";
 }
 
 /// <summary>
