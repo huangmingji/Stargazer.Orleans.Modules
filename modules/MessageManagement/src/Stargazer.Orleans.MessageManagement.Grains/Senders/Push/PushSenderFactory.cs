@@ -1,21 +1,24 @@
+using System.Net.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
 
 namespace Stargazer.Orleans.MessageManagement.Grains.Senders.Push;
 
-public class PushSenderFactory(PushSettings settings, ILoggerFactory loggerFactory) : IPushSender
+public class PushSenderFactory(PushSettings settings, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory) : IPushSender
 {
     public string ProviderName => "push_factory";
 
     private IPushSender GetProvider(string? providerName = null)
     {
         var name = providerName ?? settings.DefaultProvider?.ToLower() ?? "jpush";
+        var httpClient = httpClientFactory.CreateClient("JPush");
         
         return name switch
         {
-            "jpush" when settings.JPush != null => new JPushSender(settings.JPush, loggerFactory.CreateLogger<JPushSender>()),
+            "jpush" when settings.JPush != null => new JPushSender(settings.JPush, loggerFactory.CreateLogger<JPushSender>(), httpClient),
             "umeng" when settings.Umeng != null => new UmengSender(settings.Umeng, loggerFactory.CreateLogger<UmengSender>()),
-            _ when settings.JPush != null => new JPushSender(settings.JPush, loggerFactory.CreateLogger<JPushSender>()),
+            _ when settings.JPush != null => new JPushSender(settings.JPush, loggerFactory.CreateLogger<JPushSender>(), httpClient),
             _ => throw new NotSupportedException($"Push provider '{name}' is not configured or not supported.")
         };
     }

@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.Orleans.Persistence.AdoNet" Version="10.0.1" />
     <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.0.1" />
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
     <PackageReference Include="Npgsql" Version="10.0.0" />
     <PackageReference Include="Riok.Mapperly" Version="4.3.0" />
     <PackageReference Include="AlibabaCloud.SDK.Dysmsapi20170525" Version="4.3.0" />
