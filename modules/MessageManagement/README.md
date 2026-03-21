@@ -53,7 +53,7 @@ Stargazer.Orleans.MessageManagement/
 │  │  Senders/                                                           │    │
 │  │  ├── Email/    (SmtpEmailSender)                                    │    │
 │  │  ├── Sms/     (Aliyun/Tencent/Huawei/Ctyun Senders)                 │    │
-│  │  └── Push/    (JPush/Umeng - 预留)                                   │    │
+│  │   └── Push/    (JPush/Umeng Senders)                                 │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 └───────────────────────────────┬─────────────────────────────────────────────┘
                                 │
@@ -170,8 +170,8 @@ appsettings.json
 | 腾讯云 | SMS | TencentCloud SDK 3.0 | SecretId/SecretKey |
 | 华为云 | SMS | HTTP API | WSSE |
 | 天翼云 | SMS | HTTP API | HMAC-SHA256 |
-| 极光推送 | Push | - | - (预留) |
-| 友盟推送 | Push | - | - (预留) |
+| 极光推送 | Push | HTTP API v3 | HTTP Basic Auth |
+| 友盟推送 | Push | HTTP API | MD5 Sign |
 
 ## 支持的消息通道
 
@@ -182,8 +182,8 @@ appsettings.json
 | SMS | 腾讯云 | ✅ 已实现 | TencentCloud SDK 3.0 |
 | SMS | 华为云 | ✅ 已实现 | HTTP API (WSSE认证) |
 | SMS | 天翼云 | ✅ 已实现 | HTTP API |
-| Push | 极光推送 | 🔧 预留接口 | - |
-| Push | 友盟推送 | 🔧 预留接口 | - |
+| Push | 极光推送 | ✅ 已实现 | HTTP API v3 |
+| Push | 友盟推送 | ✅ 已实现 | HTTP API |
 
 ## API 接口
 
@@ -215,7 +215,7 @@ appsettings.json
 
 ### SendMessageInputDto（发送消息）
 
-```json
+```jsonc
 {
   "channel": 1,           // 必填：1=Email, 2=SMS, 3=Push
   "receiver": "user@example.com",  // 必填：邮箱/手机号/设备Token
@@ -233,7 +233,7 @@ appsettings.json
 
 ### BatchSendMessageInputDto（批量发送）
 
-```json
+```jsonc
 {
   "channel": 1,
   "receivers": ["user1@example.com", "user2@example.com"],  // 必填：接收者列表
@@ -575,6 +575,32 @@ public class NewSmsSender : ISmsSender
 - `8613800138000` → 自动转换为 `+8613800138000`
 - `+8613800138000` → 保持不变
 
+### 极光推送 (JPush)
+
+- 使用 HTTP API v3
+- 需要配置：AppKey、MasterSecret
+- 支持目标类型：
+  - `all` - 广播（所有设备）
+  - `registration_id` - 单播（指定设备）
+  - `alias` - 别名推送
+  - `tag` - 标签推送
+- 认证方式：HTTP Basic Auth（`base64(appKey:masterSecret)`）
+- API 地址：`https://api.jpush.cn/v3/push`
+- 支持 Android、iOS 双平台推送
+
+### 友盟推送 (Umeng)
+
+- 使用 HTTP API
+- 需要配置：AppKey、AppMasterSecret
+- 支持目标类型：
+  - `broadcast` - 广播
+  - `unicast` - 单播（device_token）
+  - `customizedcast` - 别名推送
+  - `groupcast` - 标签推送
+- 认证方式：MD5 签名（`MD5(appMasterSecret + key1 + value1 + ... + appMasterSecret)`）
+- API 地址：`https://msgapi.umeng.com/api/send`
+- 支持 iOS 生产/开发环境切换
+
 ### 消息模板变量渲染
 
 模板使用 `{{variable}}` 语法定义变量：
@@ -605,13 +631,14 @@ public class NewSmsSender : ISmsSender
 
 1. **SMS Provider**：所有 SMS Provider（阿里云、腾讯云、华为云、天翼云）均已实现
 2. **Email Provider**：SMTP 邮件发送已实现（MailKit）
-3. **模板管理**：支持 `{{variable}}` 占位符渲染
-4. **批量发送**：支持批量发送消息
-5. **消息记录**：完整的发送历史记录
+3. **Push Provider**：极光推送（JPush）和友盟推送（Umeng）均已实现
+4. **模板管理**：支持 `{{variable}}` 占位符渲染
+5. **批量发送**：支持批量发送消息
+6. **消息记录**：完整的发送历史记录
 
 ### 待实现功能
 
-1. **Push Provider**：极光推送和友盟推送接口预留，待实现
+1. ~~**Push Provider**：极光推送和友盟推送均已实现~~ ✅
 2. **定时消息消费**：定时消息需要在定时时间到达后被消费，需配合后台调度器
 3. **自动重试**：目前仅支持手动重试，可扩展自动重试机制
 4. **Provider 健康检查**：暂无自动故障转移
@@ -621,4 +648,6 @@ public class NewSmsSender : ISmsSender
 
 1. **华为云 SMS**：使用 HTTP API（WSSE 认证），而非 SDK（SDK 仅提供管理 API）
 2. **天翼云 SMS**：使用 HTTP API（HMAC-SHA256 认证）
-3. **手机号处理**：所有 SMS Provider 自动处理中国手机号格式（支持 `138xxxx`、`+86138xxx`、`86138xxx`）
+3. **极光推送**：使用 HTTP API v3（HTTP Basic Auth 认证）
+4. **友盟推送**：使用 HTTP API（MD5 签名认证）
+5. **手机号处理**：所有 SMS Provider 自动处理中国手机号格式（支持 `138xxxx`、`+86138xxx`、`86138xxx`）

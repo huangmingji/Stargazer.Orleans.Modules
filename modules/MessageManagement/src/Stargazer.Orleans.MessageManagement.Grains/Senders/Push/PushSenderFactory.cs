@@ -17,7 +17,7 @@ public class PushSenderFactory(PushSettings settings, ILoggerFactory loggerFacto
         return name switch
         {
             "jpush" when settings.JPush != null => new JPushSender(settings.JPush, loggerFactory.CreateLogger<JPushSender>(), httpClient),
-            "umeng" when settings.Umeng != null => new UmengSender(settings.Umeng, loggerFactory.CreateLogger<UmengSender>()),
+            "umeng" when settings.Umeng != null => new UmengSender(settings.Umeng, loggerFactory.CreateLogger<UmengSender>(), httpClient),
             _ when settings.JPush != null => new JPushSender(settings.JPush, loggerFactory.CreateLogger<JPushSender>(), httpClient),
             _ => throw new NotSupportedException($"Push provider '{name}' is not configured or not supported.")
         };
