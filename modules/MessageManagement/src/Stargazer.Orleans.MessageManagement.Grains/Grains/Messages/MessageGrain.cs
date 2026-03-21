@@ -262,7 +262,21 @@ public class MessageGrain : Grain, IMessageGrain
     private async Task<(bool Success, string? MessageId, string? ErrorMessage)> SendEmailAsync(MessageRecord record)
     {
         var sender = _emailSenders.FirstOrDefault(x =>
-            x.ProviderName == record.Provider) ?? _emailSenders.First();
+            x.ProviderName.Equals(record.Provider, StringComparison.OrdinalIgnoreCase));
+
+        if (sender == null)
+        {
+            if (_emailSenders.Any())
+            {
+                sender = _emailSenders.First();
+                _logger.LogWarning("Email provider '{Provider}' not found, using default '{Default}'",
+                    record.Provider, sender.ProviderName);
+            }
+            else
+            {
+                return (false, null, "No email sender configured");
+            }
+        }
 
         var content = await RenderTemplateAsync(record);
         var result = await sender.SendAsync(record.Receiver, record.Subject ?? "", content);
@@ -273,7 +287,21 @@ public class MessageGrain : Grain, IMessageGrain
     private async Task<(bool Success, string? MessageId, string? ErrorMessage)> SendSmsAsync(MessageRecord record)
     {
         var sender = _smsSenders.FirstOrDefault(x =>
-            x.ProviderName == record.Provider) ?? _smsSenders.First();
+            x.ProviderName.Equals(record.Provider, StringComparison.OrdinalIgnoreCase));
+
+        if (sender == null)
+        {
+            if (_smsSenders.Any())
+            {
+                sender = _smsSenders.First();
+                _logger.LogWarning("SMS provider '{Provider}' not found, using default '{Default}'",
+                    record.Provider, sender.ProviderName);
+            }
+            else
+            {
+                return (false, null, "No SMS sender configured");
+            }
+        }
 
         var templateCode = record.TemplateCode ?? _settings.Sms.DefaultTemplateCode;
         Dictionary<string, string>? templateParams = null;
@@ -298,7 +326,21 @@ public class MessageGrain : Grain, IMessageGrain
     private async Task<(bool Success, string? MessageId, string? ErrorMessage)> SendPushAsync(MessageRecord record)
     {
         var sender = _pushSenders.FirstOrDefault(x =>
-            x.ProviderName == record.Provider) ?? _pushSenders.First();
+            x.ProviderName.Equals(record.Provider, StringComparison.OrdinalIgnoreCase));
+
+        if (sender == null)
+        {
+            if (_pushSenders.Any())
+            {
+                sender = _pushSenders.First();
+                _logger.LogWarning("Push provider '{Provider}' not found, using default '{Default}'",
+                    record.Provider, sender.ProviderName);
+            }
+            else
+            {
+                return (false, null, "No push sender configured");
+            }
+        }
 
         var content = await RenderTemplateAsync(record);
 

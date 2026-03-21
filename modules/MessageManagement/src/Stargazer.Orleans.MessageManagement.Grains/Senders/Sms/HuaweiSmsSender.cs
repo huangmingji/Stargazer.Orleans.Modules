@@ -13,7 +13,7 @@ public class HuaweiSmsSender : ISmsSender
     private readonly ILogger<HuaweiSmsSender> _logger;
     private readonly HttpClient _httpClient;
 
-    public string ProviderName => "Huawei";
+    public string ProviderName => "huawei";
 
     public HuaweiSmsSender(HuaweiSmsSettings settings, ILogger<HuaweiSmsSender> logger)
     {

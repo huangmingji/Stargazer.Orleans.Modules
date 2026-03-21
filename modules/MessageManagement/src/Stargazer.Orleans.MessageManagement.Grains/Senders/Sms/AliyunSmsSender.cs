@@ -13,7 +13,7 @@ public class AliyunSmsSender : ISmsSender
     private readonly ILogger<AliyunSmsSender> _logger;
     private readonly Client _client;
 
-    public string ProviderName => "Aliyun";
+    public string ProviderName => "aliyun";
 
     public AliyunSmsSender(AliyunSmsSettings settings, ILogger<AliyunSmsSender> logger)
     {

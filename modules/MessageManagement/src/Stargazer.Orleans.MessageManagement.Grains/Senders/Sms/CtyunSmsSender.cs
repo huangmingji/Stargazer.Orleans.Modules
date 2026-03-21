@@ -13,7 +13,7 @@ public class CtyunSmsSender : ISmsSender
     private readonly ILogger<CtyunSmsSender> _logger;
     private readonly HttpClient _httpClient;
 
-    public string ProviderName => "Ctyun";
+    public string ProviderName => "ctyun";
 
     public CtyunSmsSender(CtyunSmsSettings settings, ILogger<CtyunSmsSender> logger)
     {

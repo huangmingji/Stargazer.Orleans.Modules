@@ -13,7 +13,7 @@ public class TencentSmsSender : ISmsSender
     private readonly ILogger<TencentSmsSender> _logger;
     private readonly SmsClient? _client;
 
-    public string ProviderName => "Tencent";
+    public string ProviderName => "tencent";
 
     public TencentSmsSender(TencentSmsSettings settings, ILogger<TencentSmsSender> logger)
     {

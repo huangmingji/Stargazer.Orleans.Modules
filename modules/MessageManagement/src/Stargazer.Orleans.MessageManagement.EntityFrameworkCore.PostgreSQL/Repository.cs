@@ -133,10 +133,10 @@ namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL
             return await GetQueryable().Where(x => x.Id.Equals(id)).FirstOrDefaultAsync(cancellationToken);
         }
 
-        public async Task<bool> AnyAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default)
-        {
-            return await Where(expression).AnyAsync(expression, cancellationToken);
-        }
+    public async Task<bool> AnyAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default)
+    {
+        return await Where(expression).AnyAsync(cancellationToken);
+    }
 
         public async Task<int> CountAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default)
         {
@@ -175,27 +175,35 @@ namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL
 
     public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
     {
+        if (_transaction != null)
+        {
+            throw new InvalidOperationException("A transaction is already in progress. Commit or rollback the existing transaction first.");
+        }
         _transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
     }
 
     public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
     {
-        if (_transaction != null)
+        if (_transaction == null)
         {
-            await _transaction.CommitAsync(cancellationToken);
-            await _transaction.DisposeAsync();
-            _transaction = null;
+            throw new InvalidOperationException("No transaction in progress to commit.");
         }
+        
+        await _transaction.CommitAsync(cancellationToken);
+        await _transaction.DisposeAsync();
+        _transaction = null;
     }
 
     public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
     {
-        if (_transaction != null)
+        if (_transaction == null)
         {
-            await _transaction.RollbackAsync(cancellationToken);
-            await _transaction.DisposeAsync();
-            _transaction = null;
+            return;
         }
+        
+        await _transaction.RollbackAsync(cancellationToken);
+        await _transaction.DisposeAsync();
+        _transaction = null;
     }
 }
 }
