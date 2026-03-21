@@ -50,4 +50,8 @@ public interface IRepository<TEntity, in TKey>
         Expression<Func<TEntity, object>>? orderBy = null,
         bool orderByDescending = false,
         CancellationToken cancellationToken = default);
+
+    Task BeginTransactionAsync(CancellationToken cancellationToken = default);
+    Task CommitTransactionAsync(CancellationToken cancellationToken = default);
+    Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
 }

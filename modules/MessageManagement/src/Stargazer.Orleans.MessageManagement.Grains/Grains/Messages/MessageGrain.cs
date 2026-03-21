@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
 using Stargazer.Orleans.MessageManagement.Domain;
@@ -112,10 +113,28 @@ public class MessageGrain : Grain, IMessageGrain
             records.Add(record);
         }
 
-        await _recordRepository.InsertAsync(records);
+        try
+        {
+            await _recordRepository.BeginTransactionAsync();
 
-        var tasks = records.Select(SendMessageInternal);
-        await Task.WhenAll(tasks);
+            await _recordRepository.InsertAsync(records);
+
+            var tasks = records.Select(SendMessageInternal);
+            await Task.WhenAll(tasks);
+
+            await _recordRepository.CommitTransactionAsync();
+
+            _logger.LogInformation("Batch send completed: {Count} messages, {Success} succeeded, {Failed} failed",
+                records.Count,
+                records.Count(r => r.Status == MessageStatus.Sent),
+                records.Count(r => r.Status == MessageStatus.Failed));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Batch send failed, rolling back transaction");
+            await _recordRepository.RollbackTransactionAsync();
+            throw;
+        }
 
         return records.Select(ToDto).ToList();
     }
@@ -265,7 +284,10 @@ public class MessageGrain : Grain, IMessageGrain
             {
                 templateParams = JsonSerializer.Deserialize<Dictionary<string, string>>(record.Variables);
             }
-            catch { }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize variables for record {RecordId}", record.Id);
+            }
         }
 
         var result = await sender.SendAsync(record.Receiver, templateCode, templateParams);
@@ -323,7 +345,10 @@ public class MessageGrain : Grain, IMessageGrain
                     }
                 }
             }
-            catch { }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to render template for record {RecordId}", record.Id);
+            }
         }
 
         return content;
@@ -349,7 +374,10 @@ public class MessageGrain : Grain, IMessageGrain
             {
                 variables = JsonSerializer.Deserialize<Dictionary<string, string>>(record.Variables);
             }
-            catch { }
+            catch
+            {
+                // Variables deserialization failed, return null
+            }
         }
 
         return new MessageRecordDto

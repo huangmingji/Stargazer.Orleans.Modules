@@ -10,6 +10,7 @@ namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL
         where TEntity : class, IEntity<TKey>, new()
         where TKey : notnull
     {
+        private Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? _transaction;
         public async Task DeleteAsync(TKey id, CancellationToken cancellationToken = default)
         {
             TEntity? entity = await this.FindAsync(id, cancellationToken);
@@ -169,7 +170,32 @@ namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
             
-            return (items, total);
+        return (items, total);
+    }
+
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        _transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_transaction != null)
+        {
+            await _transaction.CommitAsync(cancellationToken);
+            await _transaction.DisposeAsync();
+            _transaction = null;
         }
     }
+
+    public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_transaction != null)
+        {
+            await _transaction.RollbackAsync(cancellationToken);
+            await _transaction.DisposeAsync();
+            _transaction = null;
+        }
+    }
+}
 }

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Concurrency;
@@ -181,7 +182,10 @@ public class TemplateGrain : Grain, ITemplateGrain
         {
             variables = JsonSerializer.Deserialize<List<TemplateVariableDto>>(template.Variables);
         }
-        catch { }
+        catch
+        {
+            // Variables deserialization failed, return null
+        }
 
         return new TemplateDto
         {
