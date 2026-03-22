@@ -12,7 +12,7 @@ namespace Stargazer.Orleans.MessageManagement.Silo.Controllers;
 [Route("api/message")]
 public class MessageController(IClusterClient client, ILogger<MessageController> logger) : ControllerBase
 {
-    private IMessageGrain GetMessageGrain() => client.GetGrain<IMessageGrain>(Guid.NewGuid());
+    private IMessageGrain GetMessageGrain() => client.GetGrain<IMessageGrain>(0);
 
     [HttpPost("send")]
     public async Task<IActionResult> SendAsync([FromBody] SendMessageInputDto input)

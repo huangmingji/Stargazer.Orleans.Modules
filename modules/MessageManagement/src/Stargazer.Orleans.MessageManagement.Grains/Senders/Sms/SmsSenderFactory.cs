@@ -1,3 +1,5 @@
+using System.Net.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
 
@@ -7,13 +9,15 @@ public class SmsSenderFactory : ISmsSender
 {
     private readonly SmsSettings _settings;
     private readonly ILoggerFactory _loggerFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
 
     public string ProviderName => "sms_factory";
 
-    public SmsSenderFactory(SmsSettings settings, ILoggerFactory loggerFactory)
+    public SmsSenderFactory(SmsSettings settings, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
     {
         _settings = settings;
         _loggerFactory = loggerFactory;
+        _httpClientFactory = httpClientFactory;
     }
 
     private ISmsSender GetProvider(string? providerName = null)
@@ -24,8 +28,8 @@ public class SmsSenderFactory : ISmsSender
         {
             "aliyun" when _settings.Aliyun != null => new AliyunSmsSender(_settings.Aliyun, _loggerFactory.CreateLogger<AliyunSmsSender>()),
             "tencent" when _settings.Tencent != null => new TencentSmsSender(_settings.Tencent, _loggerFactory.CreateLogger<TencentSmsSender>()),
-            "huawei" when _settings.Huawei != null => new HuaweiSmsSender(_settings.Huawei, _loggerFactory.CreateLogger<HuaweiSmsSender>()),
-            "ctyun" when _settings.Ctyun != null => new CtyunSmsSender(_settings.Ctyun, _loggerFactory.CreateLogger<CtyunSmsSender>()),
+            "huawei" when _settings.Huawei != null => new HuaweiSmsSender(_settings.Huawei, _loggerFactory.CreateLogger<HuaweiSmsSender>(), _httpClientFactory.CreateClient("HuaweiSms")),
+            "ctyun" when _settings.Ctyun != null => new CtyunSmsSender(_settings.Ctyun, _loggerFactory.CreateLogger<CtyunSmsSender>(), _httpClientFactory.CreateClient("CtyunSms")),
             _ when _settings.Aliyun != null => new AliyunSmsSender(_settings.Aliyun, _loggerFactory.CreateLogger<AliyunSmsSender>()),
             _ => throw new NotSupportedException($"SMS provider '{name}' is not configured or not supported.")
         };

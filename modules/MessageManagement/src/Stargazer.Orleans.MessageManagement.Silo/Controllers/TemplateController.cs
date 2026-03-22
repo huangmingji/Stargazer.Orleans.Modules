@@ -12,7 +12,7 @@ namespace Stargazer.Orleans.MessageManagement.Silo.Controllers;
 [Route("api/template")]
 public class TemplateController(IClusterClient client, ILogger<TemplateController> logger) : ControllerBase
 {
-    private ITemplateGrain GetTemplateGrain(Guid id) => client.GetGrain<ITemplateGrain>(id);
+    private ITemplateGrain Grain => client.GetGrain<ITemplateGrain>(0);
 
     [HttpPost]
     public async Task<IActionResult> CreateAsync([FromBody] CreateTemplateInputDto input)
@@ -34,8 +34,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
                 return BadRequest(ResponseData.Fail(code: "invalid_content", message: "Content template is required."));
             }
 
-            var grain = GetTemplateGrain(Guid.NewGuid());
-            var result = await grain.CreateAsync(input);
+            var result = await Grain.CreateAsync(input);
             return Ok(ResponseData.Success(data: result));
         }
         catch (Exception ex)
@@ -60,8 +59,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
                 return BadRequest(ResponseData.Fail(code: "invalid_name", message: "Template name is required."));
             }
 
-            var grain = GetTemplateGrain(input.Id);
-            var result = await grain.UpdateAsync(input);
+            var result = await Grain.UpdateAsync(input);
             return Ok(ResponseData.Success(data: result));
         }
         catch (Exception ex)
@@ -76,8 +74,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     {
         try
         {
-            var grain = GetTemplateGrain(id);
-            await grain.DeleteAsync(id);
+            await Grain.DeleteAsync(id);
             return Ok(ResponseData.Success(data: true));
         }
         catch (Exception ex)
@@ -92,8 +89,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     {
         try
         {
-            var grain = GetTemplateGrain(id);
-            var result = await grain.GetAsync(id);
+            var result = await Grain.GetAsync(id);
             
             if (result == null)
             {
@@ -114,8 +110,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     {
         try
         {
-            var grain = GetTemplateGrain(Guid.NewGuid());
-            var result = await grain.GetByCodeAsync(code, channel);
+            var result = await Grain.GetByCodeAsync(code, channel);
             
             if (result == null)
             {
@@ -136,8 +131,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     {
         try
         {
-            var grain = GetTemplateGrain(Guid.NewGuid());
-            var results = await grain.GetByChannelAsync(channel);
+            var results = await Grain.GetByChannelAsync(channel);
             return Ok(ResponseData.Success(data: results));
         }
         catch (Exception ex)
@@ -157,8 +151,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     {
         try
         {
-            var grain = GetTemplateGrain(Guid.NewGuid());
-            var (items, total) = await grain.GetTemplatesAsync(channel, searchText, isActive, page, pageSize);
+            var (items, total) = await Grain.GetTemplatesAsync(channel, searchText, isActive, page, pageSize);
             return Ok(ResponseData.Success(data: new { Items = items, Total = total, Page = page, PageSize = pageSize }));
         }
         catch (Exception ex)
@@ -173,8 +166,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     {
         try
         {
-            var grain = GetTemplateGrain(id);
-            var result = await grain.PreviewAsync(id, variables);
+            var result = await Grain.PreviewAsync(id, variables);
             return Ok(ResponseData.Success(data: result));
         }
         catch (Exception ex)

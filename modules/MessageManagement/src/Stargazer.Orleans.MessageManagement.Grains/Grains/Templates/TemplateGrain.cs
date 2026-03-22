@@ -1,7 +1,5 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
-using Orleans;
 using Orleans.Concurrency;
 using Stargazer.Orleans.MessageManagement.Domain;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
@@ -10,7 +8,7 @@ using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates.Dtos;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
 
-namespace Stargazer.Orleans.MessageManagement.Silo.Grains.Templates;
+namespace Stargazer.Orleans.MessageManagement.Grains.Grains.Templates;
 
 /// <summary>
 /// 消息模板 Grain 实现

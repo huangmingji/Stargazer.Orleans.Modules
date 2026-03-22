@@ -6,7 +6,7 @@ namespace Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages;
 /// <summary>
 /// 消息发送Grain接口
 /// </summary>
-public interface IMessageGrain : IGrainWithGuidKey
+public interface IMessageGrain : IGrainWithIntegerKey
 {
     /// <summary>
     /// 发送消息

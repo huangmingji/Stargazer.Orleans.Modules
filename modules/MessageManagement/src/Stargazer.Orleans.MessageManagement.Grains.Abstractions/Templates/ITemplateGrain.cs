@@ -7,7 +7,7 @@ namespace Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates;
 /// <summary>
 /// 消息模板Grain接口
 /// </summary>
-public interface ITemplateGrain : IGrainWithGuidKey
+public interface ITemplateGrain : IGrainWithIntegerKey
 {
     /// <summary>
     /// 创建模板

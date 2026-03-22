@@ -13,7 +13,7 @@ public abstract class Entity<TKey> : IEntity<TKey> where TKey : notnull
     /// <summary>
     /// 新增时间
     /// </summary>
-    public DateTime CreationTime { get; set; } = DateTime.Now;
+    public DateTime CreationTime { get; set; } = DateTime.UtcNow;
 
     /// <summary>
     /// 修改人
@@ -23,5 +23,5 @@ public abstract class Entity<TKey> : IEntity<TKey> where TKey : notnull
     /// <summary>
     /// 修改时间
     /// </summary>
-    public DateTime LastModifyTime { get; set; } = DateTime.Now;
+    public DateTime LastModifyTime { get; set; } = DateTime.UtcNow;
 }

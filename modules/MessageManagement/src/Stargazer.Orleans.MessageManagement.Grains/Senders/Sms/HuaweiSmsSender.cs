@@ -15,11 +15,11 @@ public class HuaweiSmsSender : ISmsSender
 
     public string ProviderName => "huawei";
 
-    public HuaweiSmsSender(HuaweiSmsSettings settings, ILogger<HuaweiSmsSender> logger)
+    public HuaweiSmsSender(HuaweiSmsSettings settings, ILogger<HuaweiSmsSender> logger, HttpClient httpClient)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _httpClient = new HttpClient();
+        _httpClient = httpClient;
     }
 
     public async Task<SmsSendResult> SendAsync(

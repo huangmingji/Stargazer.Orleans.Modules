@@ -119,8 +119,10 @@ public class MessageGrain : Grain, IMessageGrain
 
             await _recordRepository.InsertAsync(records);
 
-            var tasks = records.Select(SendMessageInternal);
-            await Task.WhenAll(tasks);
+            foreach (var record in records)
+            {
+                await SendMessageInternal(record);
+            }
 
             await _recordRepository.CommitTransactionAsync();
 

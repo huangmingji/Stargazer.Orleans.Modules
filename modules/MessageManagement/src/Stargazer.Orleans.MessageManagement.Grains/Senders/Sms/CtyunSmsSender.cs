@@ -15,14 +15,11 @@ public class CtyunSmsSender : ISmsSender
 
     public string ProviderName => "ctyun";
 
-    public CtyunSmsSender(CtyunSmsSettings settings, ILogger<CtyunSmsSender> logger)
+    public CtyunSmsSender(CtyunSmsSettings settings, ILogger<CtyunSmsSender> logger, HttpClient httpClient)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _httpClient = new HttpClient
-        {
-            BaseAddress = new Uri(_settings.RequestUrl)
-        };
+        _httpClient = httpClient;
     }
 
     public async Task<SmsSendResult> SendAsync(
