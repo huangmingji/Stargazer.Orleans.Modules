@@ -1,6 +1,8 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Orleans.Configuration;
+using Orleans.Hosting;
+using Orleans.Runtime;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
 using Stargazer.Orleans.MessageManagement.Grains.Senders.Email;
@@ -41,6 +43,9 @@ public static class OrleansServerExtension
             {
                 options.ClusterId = "message";
                 options.ServiceId = "orleans-app";
+            }).UseRedisReminderService(options =>
+            {
+                options.ConfigurationOptions = StackExchange.Redis.ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
             }).AddAdoNetGrainStorageAsDefault(options =>
             {
                 options.Invariant = "Npgsql";

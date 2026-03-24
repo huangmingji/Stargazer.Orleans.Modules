@@ -76,13 +76,23 @@ public class MessageGrain : Grain, IMessageGrain
 
         if (input.ScheduledAt.HasValue && input.ScheduledAt > DateTime.UtcNow)
         {
-            _logger.LogInformation("Message {RecordId} scheduled for {ScheduledAt}", record.Id, input.ScheduledAt);
+            _logger.LogInformation("Message {RecordId} scheduled for {ScheduledAt}, registering reminder",
+                record.Id, input.ScheduledAt);
+
+            var reminderGrain = GrainFactory.GetGrain<IScheduledMessageReminderGrain>(GetReminderGrainKey(input.ScheduledAt.Value));
+            await reminderGrain.RegisterReminderAsync(record.Id, input.ScheduledAt.Value);
+
             return ToDto(record);
         }
 
         await SendMessageInternal(record);
 
         return ToDto(record);
+    }
+
+    private static string GetReminderGrainKey(DateTime scheduledAt)
+    {
+        return $"scheduler_{scheduledAt:yyyyMMddHH}";
     }
 
     public async Task<List<MessageRecordDto>> BatchSendAsync(BatchSendMessageInputDto input)
@@ -213,6 +223,13 @@ public class MessageGrain : Grain, IMessageGrain
         if (record.Status == MessageStatus.Sent || record.Status == MessageStatus.Delivered)
         {
             return false;
+        }
+
+        if (record.ScheduledAt.HasValue && record.ScheduledAt > DateTime.UtcNow)
+        {
+            var reminderGrain = GrainFactory.GetGrain<IScheduledMessageReminderGrain>(
+                GetReminderGrainKey(record.ScheduledAt.Value));
+            await reminderGrain.UnregisterReminderAsync(record.Id);
         }
 
         record.Status = MessageStatus.Cancelled;

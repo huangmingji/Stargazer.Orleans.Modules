@@ -53,7 +53,7 @@ Stargazer.Orleans.MessageManagement/
 │  │  Senders/                                                           │    │
 │  │  ├── Email/    (SmtpEmailSender)                                    │    │
 │  │  ├── Sms/     (Aliyun/Tencent/Huawei/Ctyun Senders)                 │    │
-│  │   └── Push/    (JPush/Umeng Senders)                                 │    │
+│  │   └── Push/    (JPush/Umeng Senders)                                │    │
 │  └─────────────────────────────────────────────────────────────────────┘    │
 └───────────────────────────────┬─────────────────────────────────────────────┘
                                 │
@@ -90,35 +90,90 @@ Stargazer.Orleans.MessageManagement/
                                 │
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ 3. 模板渲染 (可选)                                                             │
-│    → 根据 templateCode 查询模板                                                │
-│    → 渲染 {{variable}} 占位符                                                  │
+│ 3. 定时消息判断                                                                │
+│    → 如果 scheduledAt > 当前时间                                               │
+│    → 注册 Redis Reminder                                                      │
+│    → 立即返回 (Status=Pending)                                                │
+│    → 否则继续步骤 4                                                            │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                    ┌───────────┴───────────┐
+                    │  scheduledAt > Now?   │
+                    └───────────┬───────────┘
+                       Yes      │       No
+                    ┌────▼────────┐          │
+                    │ Register    │          │
+                    │ Reminder    │          │
+                    └────┬────────┘          │
+                         │                   │
+                         ▼                   ▼
+              ┌──────────────────┐   ┌──────────────────────────────────────────┐
+              │ Return (Pending) │   │ 4. 模板渲染 (可选)                         │
+              └──────────────────┘   │    → 根据 templateCode 查询模板            │
+                                     │    → 渲染 {{variable}} 占位符              │
+                                     └─────────────────┬────────────────────────┘
+                                                       │
+                                                       ▼
+                                    ┌──────────────────────────────────────────┐
+                                    │ 5. Provider 路由                          │
+                                    │    → SmsSenderFactory / PushSenderFactory│
+                                    │    → 根据 Provider 名称或默认配置选择        │
+                                    └─────────────────┬────────────────────────┘
+                                                      │
+                                                      ▼
+                                    ┌──────────────────────────────────────────┐
+                                    │ 6. Provider 发送                          │
+                                    │    → AliyunSmsSender (SDK)               │
+                                    │    → TencentSmsSender (SDK)              │
+                                    │    → HuaweiSmsSender (HTTP API)          │
+                                    │    → CtyunSmsSender (HTTP API)           │
+                                    │    → SmtpEmailSender (MailKit)           │
+                                    └─────────────────┬────────────────────────┘
+                                                      │
+                                                      ▼
+                                    ┌──────────────────────────────────────────┐
+                                    │ 7. 结果更新                               │
+                                    │    → 更新 MessageRecord 状态              │
+                                    │    → 记录外部消息 ID 或失败原因              │
+                                    └──────────────────────────────────────────┘
+```
+
+### 定时消息调度流程
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Reminder 触发 (到时)                                                          │
+│    → ScheduledMessageReminderGrain.ReceiveReminder()                         │
 └───────────────────────────────┬──────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ 4. Provider 路由                                                              │
-│    → SmsSenderFactory / PushSenderFactory                                    │
-│    → 根据 Provider 名称或默认配置选择 Provider                                   │
+│ 获取消息记录                                                                   │
+│    → 查询 MessageRecord (Status=Pending)                                      │
+│    → 验证状态未变更                                                            │
 └───────────────────────────────┬──────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ 5. Provider 发送                                                              │
-│    → AliyunSmsSender (SDK)                                                   │
-│    → TencentSmsSender (SDK)                                                  │
-│    → HuaweiSmsSender (HTTP API)                                              │
-│    → CtyunSmsSender (HTTP API)                                               │
-│    → SmtpEmailSender (MailKit)                                               │
+│ 发送消息                                                                      │
+│    → 根据 Channel 调用对应的 Sender                                            │
+│    → 更新状态 (Sent/Failed)                                                   │
 └───────────────────────────────┬──────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌──────────────────────────────────────────────────────────────────────────────┐
-│ 6. 结果更新                                                                   │
-│    → 更新 MessageRecord 状态 (Sent/Failed)                                    │
-│    → 记录外部消息 ID 或失败原因                                                  │
+│ 注销 Reminder                                                                 │
+│    → UnregisterReminder()                                                    │
+│    → 清理 Redis 中的 Reminder 记录                                             │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
+
+### Redis Reminder 持久化
+
+定时消息使用 Redis 存储 Reminder 记录，确保：
+- **Silo 重启后 Reminder 仍然有效**
+- **分布式环境下 Reminder 被正确触发**
+- **消息不会丢失或被遗漏**
 
 ### 设计模式
 
@@ -129,15 +184,19 @@ Stargazer.Orleans.MessageManagement/
 | Dependency Injection | Grain 构造函数注入 | 松耦合 |
 | Repository | `IRepository<T, K>` | 数据访问抽象 |
 | DTO/Projection | `MessageRecordDto`, `SendMessageInputDto` | API 契约 |
+| Reminder | `ScheduledMessageReminderGrain` | 定时消息持久化调度 |
 
 ### Orleans 特性使用
 
 | 特性 | 使用位置 | 用途 |
 |------|----------|------|
 | `[StatelessWorker]` | `MessageGrain`, `TemplateGrain` | 无状态 Grain，可在任意 Silo 运行 |
-| `IGrainWithGuidKey` | `IMessageGrain`, `ITemplateGrain` | Grain 身份标识类型 |
+| `IGrainWithIntegerKey` | `IMessageGrain` | Grain 身份标识类型 |
+| `IGrainWithStringKey` | `IScheduledMessageReminderGrain` | Reminder Grain 标识 |
+| `IRemindable` | `ScheduledMessageReminderGrain` | 接收 Reminder 回调 |
 | AdoNet Grain Storage | PostgreSQL | Grain 状态持久化 |
 | Redis Clustering | `appsettings.json` | 分布式 Grain 激活 |
+| Redis Reminders | `OrleansServerExtension` | 定时消息调度（持久化） |
 
 ### 配置层次结构
 
@@ -474,7 +533,26 @@ Content-Type: application/json
 }
 ```
 
-### 4. 创建模板
+### 4. 定时发送消息
+
+```http
+POST /api/message/send
+Content-Type: application/json
+
+{
+  "channel": 2,
+  "receiver": "13800138000",
+  "templateCode": "sms_verify_code",
+  "variables": {
+    "code": "123456"
+  },
+  "scheduledAt": "2026-03-25T10:00:00Z"
+}
+```
+
+> **注意**: `scheduledAt` 必须大于当前时间，最小间隔为 1 分钟。消息将在指定时间自动发送。
+
+### 5. 创建模板
 
 ```http
 POST /api/template
@@ -570,10 +648,12 @@ public class NewSmsSender : ISmsSender
 
 ### 手机号格式
 
-所有 SMS Provider 支持以下手机号格式：
+所有 SMS Provider 支持以下手机号格式（由 `PhoneNumberHelper` 统一处理）：
 - `13800138000` → 自动转换为 `+8613800138000`
 - `8613800138000` → 自动转换为 `+8613800138000`
 - `+8613800138000` → 保持不变
+
+> **注意**: 使用统一的 `PhoneNumberHelper.FormatForChina()` 方法确保所有 Provider 的手机号格式一致。
 
 ### 极光推送 (JPush)
 
@@ -635,11 +715,12 @@ public class NewSmsSender : ISmsSender
 4. **模板管理**：支持 `{{variable}}` 占位符渲染
 5. **批量发送**：支持批量发送消息
 6. **消息记录**：完整的发送历史记录
+7. **定时发送**：基于 Redis Reminder 的持久化定时调度
 
 ### 待实现功能
 
 1. ~~**Push Provider**：极光推送和友盟推送均已实现~~ ✅
-2. **定时消息消费**：定时消息需要在定时时间到达后被消费，需配合后台调度器
+2. ~~**定时消息消费**：使用 Redis Reminder 实现后台调度~~ ✅
 3. **自动重试**：目前仅支持手动重试，可扩展自动重试机制
 4. **Provider 健康检查**：暂无自动故障转移
 5. **限流控制**：暂无内置限流
