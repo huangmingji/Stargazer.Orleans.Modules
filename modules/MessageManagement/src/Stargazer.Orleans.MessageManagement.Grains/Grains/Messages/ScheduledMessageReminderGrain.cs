@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Orleans;
@@ -23,7 +24,7 @@ public class ScheduledMessageReminderGrain : IGrainBase, IScheduledMessageRemind
     private readonly ITimerRegistry _timerRegistry;
     private readonly IGrainContext _grainContext;
     private readonly ILogger<ScheduledMessageReminderGrain> _logger;
-    private readonly Dictionary<string, IGrainReminder> _reminders = new();
+    private readonly ConcurrentDictionary<string, IGrainReminder> _reminders = new();
 
     public ScheduledMessageReminderGrain(
         IRepository<MessageRecord, Guid> recordRepository,
@@ -61,17 +62,16 @@ public class ScheduledMessageReminderGrain : IGrainBase, IScheduledMessageRemind
             dueTime,
             TimeSpan.FromMinutes(5));
 
-        _reminders[reminderName] = reminder;
+        _reminders.TryAdd(reminderName, reminder);
     }
 
     public async Task UnregisterReminderAsync(Guid messageId)
     {
         var reminderName = GetReminderName(messageId);
 
-        if (_reminders.TryGetValue(reminderName, out var reminder))
+        if (_reminders.TryRemove(reminderName, out var reminder))
         {
             await _reminderRegistry.UnregisterReminder(_grainContext.GrainId, reminder);
-            _reminders.Remove(reminderName);
             _logger.LogInformation("Unregistered reminder for message {MessageId}", messageId);
         }
     }
