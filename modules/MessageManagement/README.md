@@ -175,6 +175,8 @@ Stargazer.Orleans.MessageManagement/
 - **分布式环境下 Reminder 被正确触发**
 - **消息不会丢失或被遗漏**
 
+**线程安全**：`ScheduledMessageReminderGrain` 使用 `ConcurrentDictionary` 存储 Reminder 引用，确保多线程环境下的安全访问。
+
 ### 设计模式
 
 | 模式 | 实现 | 用途 |
@@ -185,15 +187,19 @@ Stargazer.Orleans.MessageManagement/
 | Repository | `IRepository<T, K>` | 数据访问抽象 |
 | DTO/Projection | `MessageRecordDto`, `SendMessageInputDto` | API 契约 |
 | Reminder | `ScheduledMessageReminderGrain` | 定时消息持久化调度 |
+| Thread-Safe Collection | `ConcurrentDictionary` | 线程安全的 Reminder 存储 |
 
 ### Orleans 特性使用
 
 | 特性 | 使用位置 | 用途 |
 |------|----------|------|
 | `[StatelessWorker]` | `MessageGrain`, `TemplateGrain` | 无状态 Grain，可在任意 Silo 运行 |
+| `IGrainBase` | `ScheduledMessageReminderGrain` | POCO Grain 基接口 |
 | `IGrainWithIntegerKey` | `IMessageGrain` | Grain 身份标识类型 |
 | `IGrainWithStringKey` | `IScheduledMessageReminderGrain` | Reminder Grain 标识 |
 | `IRemindable` | `ScheduledMessageReminderGrain` | 接收 Reminder 回调 |
+| `IReminderRegistry` | `ScheduledMessageReminderGrain` | Reminder 注册/注销 |
+| `IGrainContext` | `ScheduledMessageReminderGrain` | 获取 Grain 标识 |
 | AdoNet Grain Storage | PostgreSQL | Grain 状态持久化 |
 | Redis Clustering | `appsettings.json` | 分布式 Grain 激活 |
 | Redis Reminders | `OrleansServerExtension` | 定时消息调度（持久化） |
@@ -648,12 +654,22 @@ public class NewSmsSender : ISmsSender
 
 ### 手机号格式
 
-所有 SMS Provider 支持以下手机号格式（由 `PhoneNumberHelper` 统一处理）：
-- `13800138000` → 自动转换为 `+8613800138000`
-- `8613800138000` → 自动转换为 `+8613800138000`
-- `+8613800138000` → 保持不变
+所有 SMS Provider 使用统一的 `PhoneNumberHelper` 处理手机号格式：
 
-> **注意**: 使用统一的 `PhoneNumberHelper.FormatForChina()` 方法确保所有 Provider 的手机号格式一致。
+| 输入格式 | 输出格式 | 说明 |
+|----------|---------|------|
+| `13800138000` | `+8613800138000` | 无前缀，自动添加 |
+| `8613800138000` | `+8613800138000` | 86 前缀，自动添加 + |
+| `+8613800138000` | `+8613800138000` | +86 前缀，保持不变 |
+| `+11234567890` | `+11234567890` | 非中国号码，保持原格式 |
+| `+44 20 7946` | `+44 20 7946` | 国际号码，保留空格 |
+| `null`/`""`/`"   "` | `""` | 空值返回空字符串 |
+
+**验证规则** (`IsValidChinaPhoneNumber`)：
+- 必须是 +86 中国号码
+- 号码部分 7-15 位数字
+
+> **注意**: 非中国号码（如 `+1xxx`）不会被错误转换为 `+86xxx`，确保国际号码正确处理。
 
 ### 极光推送 (JPush)
 

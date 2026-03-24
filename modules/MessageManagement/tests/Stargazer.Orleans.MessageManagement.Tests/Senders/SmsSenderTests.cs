@@ -138,7 +138,8 @@ public class SmsSenderTests
         [InlineData("+8613812345678", "+8613812345678")]
         [InlineData("8613812345678", "+8613812345678")]
         [InlineData("13812345678", "+8613812345678")]
-        [InlineData("86", "+86")]
+        [InlineData("+11234567890", "+11234567890")]
+        [InlineData("+44 20 7946 0958", "+44 20 7946 0958")]
         public void FormatForChina_ShouldNormalizePhoneNumber(string input, string expected)
         {
             var result = PhoneNumberHelper.FormatForChina(input);
@@ -147,10 +148,11 @@ public class SmsSenderTests
 
         [Theory]
         [InlineData("", "")]
-        [InlineData("   ", "   ")]
-        public void FormatForChina_ShouldHandleEmptyOrWhitespace(string input, string expected)
+        [InlineData("   ", "")]
+        [InlineData(null, "")]
+        public void FormatForChina_ShouldHandleEmptyOrWhitespace(string? input, string expected)
         {
-            var result = PhoneNumberHelper.FormatForChina(input);
+            var result = PhoneNumberHelper.FormatForChina(input!);
             Assert.Equal(expected, result);
         }
 
@@ -158,9 +160,12 @@ public class SmsSenderTests
         [InlineData("13812345678", true)]
         [InlineData("+8613812345678", true)]
         [InlineData("8613812345678", true)]
+        [InlineData("1234567", true)]
+        [InlineData("123456789012345", true)]
         [InlineData("12345", false)]
         [InlineData("abc12345678", false)]
         [InlineData("", false)]
+        [InlineData("+11234567890", false)]
         public void IsValidChinaPhoneNumber_ShouldValidateCorrectly(string input, bool expected)
         {
             var result = PhoneNumberHelper.IsValidChinaPhoneNumber(input);

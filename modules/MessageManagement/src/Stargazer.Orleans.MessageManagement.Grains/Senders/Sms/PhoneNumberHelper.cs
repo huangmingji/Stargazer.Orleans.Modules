@@ -6,7 +6,7 @@ public static class PhoneNumberHelper
     {
         if (string.IsNullOrWhiteSpace(phoneNumber))
         {
-            return phoneNumber;
+            return string.Empty;
         }
 
         phoneNumber = phoneNumber.Trim();
@@ -21,6 +21,11 @@ public static class PhoneNumberHelper
             return $"+{phoneNumber}";
         }
 
+        if (phoneNumber.StartsWith("+"))
+        {
+            return phoneNumber;
+        }
+
         return $"+86{phoneNumber}";
     }
 
@@ -33,12 +38,12 @@ public static class PhoneNumberHelper
 
         var normalized = FormatForChina(phoneNumber);
 
-        if (normalized.StartsWith("+86"))
+        if (!normalized.StartsWith("+86"))
         {
-            var digits = normalized[3..];
-            return digits.Length == 11 && digits.All(char.IsDigit);
+            return false;
         }
 
-        return false;
+        var digits = normalized[3..];
+        return digits.Length >= 7 && digits.Length <= 15 && digits.All(char.IsDigit);
     }
 }
