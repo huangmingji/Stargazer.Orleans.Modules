@@ -2,8 +2,8 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
 using Stargazer.Orleans.MessageManagement.Domain;
+using Stargazer.Orleans.MessageManagement.Domain.Shared;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
-using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Enums;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates.Dtos;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
@@ -120,14 +120,14 @@ public class TemplateGrain : Grain, ITemplateGrain
         return template != null ? ToDto(template) : null;
     }
 
-    public async Task<TemplateDto?> GetByCodeAsync(string code, MessageChannelEnum channel)
+    public async Task<TemplateDto?> GetByCodeAsync(string code, MessageChannel channel)
     {
         var template = await _templateRepository.FindAsync(
             x => x.Code == code && x.Channel == (MessageChannel)channel && x.IsActive);
         return template != null ? ToDto(template) : null;
     }
 
-    public async Task<List<TemplateDto>> GetByChannelAsync(MessageChannelEnum channel)
+    public async Task<List<TemplateDto>> GetByChannelAsync(MessageChannel channel)
     {
         var templates = await _templateRepository.FindListAsync(
             x => x.Channel == (MessageChannel)channel && x.IsActive);
@@ -155,7 +155,7 @@ public class TemplateGrain : Grain, ITemplateGrain
     }
 
     public async Task<(List<TemplateDto> Items, int Total)> GetTemplatesAsync(
-        MessageChannelEnum? channel = null,
+        MessageChannel? channel = null,
         string? searchText = null,
         bool? isActive = null,
         int page = 1,

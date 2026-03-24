@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
+using Stargazer.Orleans.MessageManagement.Domain.Shared;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Dtos;
-using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Enums;
 using ResponseData = Stargazer.Orleans.MessageManagement.Grains.Abstractions.ResponseData;
 
 namespace Stargazer.Orleans.MessageManagement.Silo.Controllers;
@@ -90,8 +90,8 @@ public class MessageController(IClusterClient client, ILogger<MessageController>
 
     [HttpGet]
     public async Task<IActionResult> GetRecordsAsync(
-        [FromQuery] MessageChannelEnum? channel,
-        [FromQuery] MessageStatusEnum? status,
+        [FromQuery] MessageChannel? channel,
+        [FromQuery] MessageStatus? status,
         [FromQuery] string? receiver,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)

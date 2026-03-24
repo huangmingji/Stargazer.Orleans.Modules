@@ -1,3 +1,5 @@
+using Stargazer.Orleans.MessageManagement.Domain.Shared;
+
 namespace Stargazer.Orleans.MessageManagement.Domain;
 
 /// <summary>

@@ -1,4 +1,4 @@
-namespace Stargazer.Orleans.MessageManagement.Domain;
+namespace Stargazer.Orleans.MessageManagement.Domain.Shared;
 
 /// <summary>
 /// 消息发送状态枚举

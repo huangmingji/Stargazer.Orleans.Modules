@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
 using Stargazer.Orleans.MessageManagement.Domain;
+using Stargazer.Orleans.MessageManagement.Domain.Shared;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Dtos;

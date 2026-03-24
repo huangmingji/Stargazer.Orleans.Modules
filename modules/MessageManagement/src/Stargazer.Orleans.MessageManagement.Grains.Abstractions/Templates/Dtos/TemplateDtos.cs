@@ -1,4 +1,4 @@
-using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Enums;
+using Stargazer.Orleans.MessageManagement.Domain.Shared;
 
 namespace Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates.Dtos;
 
@@ -20,7 +20,7 @@ public class CreateTemplateInputDto
     /// <summary>
     /// 所属通道
     /// </summary>
-    public MessageChannelEnum Channel { get; set; }
+    public MessageChannel Channel { get; set; }
 
     /// <summary>
     /// 邮件主题模板（Email专用）

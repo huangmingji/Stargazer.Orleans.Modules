@@ -1,5 +1,5 @@
 using Orleans;
-using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Enums;
+using Stargazer.Orleans.MessageManagement.Domain.Shared;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates.Dtos;
 
 namespace Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates;
@@ -32,12 +32,12 @@ public interface ITemplateGrain : IGrainWithIntegerKey
     /// <summary>
     /// 根据代码获取模板
     /// </summary>
-    Task<TemplateDto?> GetByCodeAsync(string code, MessageChannelEnum channel);
+    Task<TemplateDto?> GetByCodeAsync(string code, MessageChannel channel);
 
     /// <summary>
     /// 根据通道获取模板列表
     /// </summary>
-    Task<List<TemplateDto>> GetByChannelAsync(MessageChannelEnum channel);
+    Task<List<TemplateDto>> GetByChannelAsync(MessageChannel channel);
 
     /// <summary>
     /// 预览模板渲染结果
@@ -48,7 +48,7 @@ public interface ITemplateGrain : IGrainWithIntegerKey
     /// 获取模板列表
     /// </summary>
     Task<(List<TemplateDto> Items, int Total)> GetTemplatesAsync(
-        MessageChannelEnum? channel = null,
+        MessageChannel? channel = null,
         string? searchText = null,
         bool? isActive = null,
         int page = 1,

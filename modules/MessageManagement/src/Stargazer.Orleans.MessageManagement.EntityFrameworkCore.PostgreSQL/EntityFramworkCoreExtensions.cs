@@ -6,9 +6,8 @@ namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
 
 public static class EntityFramworkCoreExtensions
 {
-    public static IServiceCollection UseEntityFramworkCore(this IServiceCollection serviceCollection)
+    public static IServiceCollection UseEntityFramworkCore(this IServiceCollection serviceCollection, IConfiguration configuration)
     {
-        IConfiguration? configuration = serviceCollection.BuildServiceProvider().GetService<IConfiguration>();
         serviceCollection.AddScoped<DbContext,EfDbContext>();
         serviceCollection.AddDbContext<EfDbContext>(
             options => { options.UseNpgsql(configuration?.GetConnectionString("Message")); }, ServiceLifetime.Scoped);

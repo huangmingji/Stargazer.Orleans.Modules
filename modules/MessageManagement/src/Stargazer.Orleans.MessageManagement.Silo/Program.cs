@@ -25,7 +25,7 @@ Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
     .CreateLogger();
 
-builder.Services.UseEntityFramworkCore().MigrateDatabase();
+builder.Services.UseEntityFramworkCore(configuration).MigrateDatabase(configuration);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi

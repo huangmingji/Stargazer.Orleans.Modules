@@ -6,9 +6,8 @@ namespace Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbM
 
 public static class EntityFramworkCoreExtensions
 {
-    public static void MigrateDatabase(this IServiceCollection serviceCollection)
+    public static void MigrateDatabase(this IServiceCollection serviceCollection, IConfiguration configuration)
     {
-        IConfiguration? configuration = serviceCollection.BuildServiceProvider().GetService<IConfiguration>();
         serviceCollection.AddDbContextFactory<EfDbMigrationsContext>(options =>
         {
             options.UseNpgsql(configuration?.GetConnectionString("Message"));

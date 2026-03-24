@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using Stargazer.Orleans.MessageManagement.Grains.Abstractions;
-using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Enums;
+using Stargazer.Orleans.MessageManagement.Domain.Shared;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates.Dtos;
 using ResponseData = Stargazer.Orleans.MessageManagement.Grains.Abstractions.ResponseData;
@@ -106,7 +105,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     }
 
     [HttpGet("code/{code}")]
-    public async Task<IActionResult> GetByCodeAsync(string code, [FromQuery] MessageChannelEnum channel)
+    public async Task<IActionResult> GetByCodeAsync(string code, [FromQuery] MessageChannel channel)
     {
         try
         {
@@ -127,7 +126,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     }
 
     [HttpGet("channel/{channel}")]
-    public async Task<IActionResult> GetByChannelAsync(MessageChannelEnum channel)
+    public async Task<IActionResult> GetByChannelAsync(MessageChannel channel)
     {
         try
         {
@@ -143,7 +142,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
 
     [HttpGet]
     public async Task<IActionResult> GetTemplatesAsync(
-        [FromQuery] MessageChannelEnum? channel,
+        [FromQuery] MessageChannel? channel,
         [FromQuery] string? searchText,
         [FromQuery] bool? isActive,
         [FromQuery] int page = 1,
