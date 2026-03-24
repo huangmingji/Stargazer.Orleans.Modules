@@ -52,7 +52,7 @@ public class AliyunSmsSender : ISmsSender
 
         try
         {
-            var formattedPhone = FormatPhoneNumber(phoneNumber);
+            var formattedPhone = PhoneNumberHelper.FormatForChina(phoneNumber);
 
             var request = new SendSmsRequest
             {
@@ -120,27 +120,5 @@ public class AliyunSmsSender : ISmsSender
     {
         _logger.LogWarning("Aliyun SMS does not support plain text sending directly - use template SMS");
         return await SendAsync(phoneNumber, string.Empty, new Dictionary<string, string> { { "content", content } }, cancellationToken);
-    }
-
-    private static string FormatPhoneNumber(string phoneNumber)
-    {
-        if (string.IsNullOrEmpty(phoneNumber))
-        {
-            return phoneNumber;
-        }
-
-        if (phoneNumber.StartsWith("+86"))
-        {
-            return phoneNumber;
-        }
-        if (phoneNumber.StartsWith("86") && phoneNumber.Length > 10)
-        {
-            return $"+{phoneNumber}";
-        }
-        if (!phoneNumber.StartsWith("+"))
-        {
-            return $"+86{phoneNumber}";
-        }
-        return phoneNumber;
     }
 }

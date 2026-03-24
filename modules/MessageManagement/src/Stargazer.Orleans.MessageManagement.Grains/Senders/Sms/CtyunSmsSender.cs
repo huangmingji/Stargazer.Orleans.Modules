@@ -30,7 +30,7 @@ public class CtyunSmsSender : ISmsSender
     {
         try
         {
-            var formattedPhone = FormatPhoneNumber(phoneNumber);
+            var formattedPhone = PhoneNumberHelper.FormatForChina(phoneNumber);
             var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
             var requestBody = new CtyunSmsRequest
@@ -122,7 +122,7 @@ public class CtyunSmsSender : ISmsSender
     {
         try
         {
-            var formattedPhone = FormatPhoneNumber(phoneNumber);
+            var formattedPhone = PhoneNumberHelper.FormatForChina(phoneNumber);
             var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
             var requestBody = new CtyunSmsRequest
@@ -182,19 +182,6 @@ public class CtyunSmsSender : ISmsSender
                 ErrorMessage = ex.Message
             };
         }
-    }
-
-    private static string FormatPhoneNumber(string phoneNumber)
-    {
-        if (phoneNumber.StartsWith("+86"))
-        {
-            return phoneNumber;
-        }
-        if (phoneNumber.StartsWith("86") && phoneNumber.Length > 10)
-        {
-            return $"+86{phoneNumber[2..]}";
-        }
-        return $"+86{phoneNumber}";
     }
 
     private static string ComputeHmacSha256(string data, string secret)

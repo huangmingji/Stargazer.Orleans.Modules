@@ -41,7 +41,7 @@ public class HuaweiSmsSender : ISmsSender
 
         try
         {
-            var formattedPhone = FormatPhoneNumber(phoneNumber);
+            var formattedPhone = PhoneNumberHelper.FormatForChina(phoneNumber);
             var timestamp = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ");
             var nonce = Guid.NewGuid().ToString("N");
 
@@ -147,27 +147,6 @@ public class HuaweiSmsSender : ISmsSender
         return Convert.ToBase64String(hash);
     }
 
-    private static string FormatPhoneNumber(string phoneNumber)
-    {
-        if (string.IsNullOrEmpty(phoneNumber))
-        {
-            return phoneNumber;
-        }
-
-        if (phoneNumber.StartsWith("+86"))
-        {
-            return phoneNumber;
-        }
-        if (phoneNumber.StartsWith("86") && phoneNumber.Length > 10)
-        {
-            return $"+{phoneNumber}";
-        }
-        if (!phoneNumber.StartsWith("+"))
-        {
-            return $"+86{phoneNumber}";
-        }
-        return phoneNumber;
-    }
 }
 
 internal class HuaweiSmsResponse

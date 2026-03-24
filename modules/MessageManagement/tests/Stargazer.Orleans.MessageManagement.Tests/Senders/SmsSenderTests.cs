@@ -131,4 +131,40 @@ public class SmsSenderTests
         
         Assert.Equal("https://sms-global.ctapi.ctyun.cn/sms/api/v1", settings.RequestUrl);
     }
+
+    public class PhoneNumberHelperTests
+    {
+        [Theory]
+        [InlineData("+8613812345678", "+8613812345678")]
+        [InlineData("8613812345678", "+8613812345678")]
+        [InlineData("13812345678", "+8613812345678")]
+        [InlineData("86", "+86")]
+        public void FormatForChina_ShouldNormalizePhoneNumber(string input, string expected)
+        {
+            var result = PhoneNumberHelper.FormatForChina(input);
+            Assert.Equal(expected, result);
+        }
+
+        [Theory]
+        [InlineData("", "")]
+        [InlineData("   ", "   ")]
+        public void FormatForChina_ShouldHandleEmptyOrWhitespace(string input, string expected)
+        {
+            var result = PhoneNumberHelper.FormatForChina(input);
+            Assert.Equal(expected, result);
+        }
+
+        [Theory]
+        [InlineData("13812345678", true)]
+        [InlineData("+8613812345678", true)]
+        [InlineData("8613812345678", true)]
+        [InlineData("12345", false)]
+        [InlineData("abc12345678", false)]
+        [InlineData("", false)]
+        public void IsValidChinaPhoneNumber_ShouldValidateCorrectly(string input, bool expected)
+        {
+            var result = PhoneNumberHelper.IsValidChinaPhoneNumber(input);
+            Assert.Equal(expected, result);
+        }
+    }
 }

@@ -68,7 +68,7 @@ public class TencentSmsSender : ISmsSender
 
         try
         {
-            var formattedPhone = FormatPhoneNumber(phoneNumber);
+            var formattedPhone = PhoneNumberHelper.FormatForChina(phoneNumber);
             var templateId = string.IsNullOrEmpty(templateCode) ? _settings.TemplateId : templateCode;
 
             var req = new SendSmsRequest
@@ -148,27 +148,5 @@ public class TencentSmsSender : ISmsSender
     {
         _logger.LogWarning("Tencent SMS does not support plain text sending directly - use template SMS");
         return await SendAsync(phoneNumber, _settings.TemplateId, new Dictionary<string, string> { { "content", content } }, cancellationToken);
-    }
-
-    private static string FormatPhoneNumber(string phoneNumber)
-    {
-        if (string.IsNullOrEmpty(phoneNumber))
-        {
-            return phoneNumber;
-        }
-
-        if (phoneNumber.StartsWith("+86"))
-        {
-            return phoneNumber;
-        }
-        if (phoneNumber.StartsWith("86") && phoneNumber.Length > 10)
-        {
-            return $"+{phoneNumber}";
-        }
-        if (!phoneNumber.StartsWith("+"))
-        {
-            return $"+86{phoneNumber}";
-        }
-        return phoneNumber;
     }
 }

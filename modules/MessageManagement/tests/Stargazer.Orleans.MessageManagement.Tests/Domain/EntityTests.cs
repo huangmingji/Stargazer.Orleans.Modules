@@ -1,4 +1,5 @@
 using Stargazer.Orleans.MessageManagement.Domain;
+using Stargazer.Orleans.MessageManagement.Domain.Shared;
 using Xunit;
 
 namespace Stargazer.Orleans.MessageManagement.Tests.Domain;
