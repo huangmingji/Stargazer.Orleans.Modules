@@ -43,10 +43,9 @@ public class CtyunSmsSender : ISmsSender
             };
 
             var jsonBody = JsonSerializer.Serialize(requestBody);
-            var stringToSign = $"POST\n{_settings.RequestUrl}\n{jsonBody}\n{timestamp}";
-            var signature = ComputeHmacSha256(stringToSign, _settings.AccessKeySecret);
+            var signature = ComputeSignature("POST", _settings.RequestUrl, jsonBody, timestamp);
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/sms/sendSms");
+            using var request = new HttpRequestMessage(HttpMethod.Post, _settings.RequestUrl);
             request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
             request.Headers.Add("X-Auth-Key", _settings.AccessKeyId);
             request.Headers.Add("X-Auth-Signature", signature);
@@ -55,34 +54,7 @@ public class CtyunSmsSender : ISmsSender
             var response = await _httpClient.SendAsync(request, cancellationToken);
             var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            if (response.IsSuccessStatusCode)
-            {
-                var ctyunResponse = JsonSerializer.Deserialize<CtyunSmsResponse>(responseContent);
-                if (ctyunResponse?.Code == "0000")
-                {
-                    return new SmsSendResult
-                    {
-                        Success = true,
-                        MessageId = ctyunResponse.Data?.SmsMsgId
-                    };
-                }
-
-                _logger.LogError("Ctyun SMS failed: {Code} - {Message}", ctyunResponse?.Code, ctyunResponse?.Message);
-                return new SmsSendResult
-                {
-                    Success = false,
-                    ErrorCode = ctyunResponse?.Code,
-                    ErrorMessage = ctyunResponse?.Message
-                };
-            }
-
-            _logger.LogError("Ctyun SMS HTTP error: {StatusCode} - {Content}", response.StatusCode, responseContent);
-            return new SmsSendResult
-            {
-                Success = false,
-                ErrorCode = "HTTP_ERROR",
-                ErrorMessage = $"HTTP {(int)response.StatusCode}: {responseContent}"
-            };
+            return HandleResponse(response, responseContent);
         }
         catch (Exception ex)
         {
@@ -134,9 +106,9 @@ public class CtyunSmsSender : ISmsSender
             };
 
             var jsonBody = JsonSerializer.Serialize(requestBody);
-            var signature = ComputeHmacSha256(jsonBody, _settings.AccessKeySecret);
+            var signature = ComputeSignature("POST", _settings.RequestUrl, jsonBody, timestamp);
 
-            using var request = new HttpRequestMessage(HttpMethod.Post, "/sms/sendSms");
+            using var request = new HttpRequestMessage(HttpMethod.Post, _settings.RequestUrl);
             request.Content = new StringContent(jsonBody, Encoding.UTF8, "application/json");
             request.Headers.Add("X-Auth-Key", _settings.AccessKeyId);
             request.Headers.Add("X-Auth-Signature", signature);
@@ -145,32 +117,7 @@ public class CtyunSmsSender : ISmsSender
             var response = await _httpClient.SendAsync(request, cancellationToken);
             var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
-            if (response.IsSuccessStatusCode)
-            {
-                var ctyunResponse = JsonSerializer.Deserialize<CtyunSmsResponse>(responseContent);
-                if (ctyunResponse?.Code == "0000")
-                {
-                    return new SmsSendResult
-                    {
-                        Success = true,
-                        MessageId = ctyunResponse.Data?.SmsMsgId
-                    };
-                }
-
-                return new SmsSendResult
-                {
-                    Success = false,
-                    ErrorCode = ctyunResponse?.Code,
-                    ErrorMessage = ctyunResponse?.Message
-                };
-            }
-
-            return new SmsSendResult
-            {
-                Success = false,
-                ErrorCode = "HTTP_ERROR",
-                ErrorMessage = $"HTTP {(int)response.StatusCode}: {responseContent}"
-            };
+            return HandleResponse(response, responseContent);
         }
         catch (Exception ex)
         {
@@ -184,11 +131,49 @@ public class CtyunSmsSender : ISmsSender
         }
     }
 
+    private static string ComputeSignature(string method, string url, string body, string timestamp)
+    {
+        var stringToSign = $"{method}\n{url}\n{body}\n{timestamp}";
+        return ComputeHmacSha256(stringToSign, string.Empty);
+    }
+
     private static string ComputeHmacSha256(string data, string secret)
     {
         using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(secret));
         var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(data));
         return Convert.ToBase64String(hash);
+    }
+
+    private SmsSendResult HandleResponse(HttpResponseMessage response, string responseContent)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            var ctyunResponse = JsonSerializer.Deserialize<CtyunSmsResponse>(responseContent);
+            if (ctyunResponse?.Code == "0000")
+            {
+                return new SmsSendResult
+                {
+                    Success = true,
+                    MessageId = ctyunResponse.Data?.SmsMsgId
+                };
+            }
+
+            _logger.LogError("Ctyun SMS failed: {Code} - {Message}", ctyunResponse?.Code, ctyunResponse?.Message);
+            return new SmsSendResult
+            {
+                Success = false,
+                ErrorCode = ctyunResponse?.Code,
+                ErrorMessage = ctyunResponse?.Message
+            };
+        }
+
+        _logger.LogError("Ctyun SMS HTTP error: {StatusCode} - {Content}", response.StatusCode, responseContent);
+        return new SmsSendResult
+        {
+            Success = false,
+            ErrorCode = "HTTP_ERROR",
+            ErrorMessage = $"HTTP {(int)response.StatusCode}: {responseContent}"
+        };
     }
 }
 
