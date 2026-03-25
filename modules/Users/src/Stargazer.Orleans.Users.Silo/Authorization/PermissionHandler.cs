@@ -1,5 +1,5 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
+using Stargazer.Orleans.Users.Grains.Abstractions.Users;
 
 namespace Stargazer.Orleans.Users.Silo.Authorization;
 
@@ -38,7 +38,7 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
             return;
         }
 
-        var userGrain = _client.GetGrain<Stargazer.Orleans.Users.Grains.Abstractions.Users.IUserGrain>(0);
+        var userGrain = _client.GetGrain<IUserGrain>(0);
         var hasPermission = await userGrain.HasPermissionAsync(userId, requirement.Permission, CancellationToken.None);
 
         if (hasPermission)
