@@ -169,4 +169,23 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
         var exists = await userGrain.EmailExistedAsync(email, cancellationToken);
         return Ok(ResponseData.Success(data: exists));
     }
+    
+    [HttpPost("has-permission")]
+    public async Task<IActionResult> HasPermission([FromBody] HasPermissionRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.UserId == Guid.Empty || string.IsNullOrWhiteSpace(request.Permission))
+        {
+            return BadRequest(ResponseData.Fail(code: "invalid_request", message: "UserId and Permission are required."));
+        }
+
+        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var hasPermission = await userGrain.HasPermissionAsync(request.UserId, request.Permission, cancellationToken);
+        return Ok(ResponseData.Success(data: hasPermission));
+    }
+}
+
+public class HasPermissionRequest
+{
+    public Guid UserId { get; set; }
+    public string Permission { get; set; } = string.Empty;
 }

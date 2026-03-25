@@ -1,5 +1,6 @@
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Authorization;
-using IUserGrain = Stargazer.Orleans.Users.Grains.Abstractions.Users.IUserGrain;
+using Microsoft.Extensions.Configuration;
 
 namespace Stargazer.Orleans.MessageManagement.Silo.Authorization;
 
@@ -15,11 +16,13 @@ public class PermissionRequirement : IAuthorizationRequirement
 
 public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
 {
-    private readonly IClusterClient _client;
+    private readonly HttpClient _httpClient;
+    private readonly string _usersServiceBaseUrl;
 
-    public PermissionHandler(IClusterClient client)
+    public PermissionHandler(HttpClient httpClient, IConfiguration configuration)
     {
-        _client = client;
+        _httpClient = httpClient;
+        _usersServiceBaseUrl = configuration["UsersService:BaseUrl"] ?? "http://localhost:5079";
     }
 
     protected override async Task HandleRequirementAsync(
@@ -38,14 +41,33 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
             return;
         }
 
-        var userGrain = _client.GetGrain<IUserGrain>(0);
-        var hasPermission = await userGrain.HasPermissionAsync(userId, requirement.Permission, CancellationToken.None);
-
-        if (hasPermission)
+        try
         {
-            context.Succeed(requirement);
+            var request = new { UserId = userId, Permission = requirement.Permission };
+            var response = await _httpClient.PostAsJsonAsync($"{_usersServiceBaseUrl}/api/user/has-permission", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<PermissionCheckResult>();
+                if (result?.Success == true && result.Data == true)
+                {
+                    context.Succeed(requirement);
+                }
+            }
+        }
+        catch
+        {
+            // If the HTTP call fails, deny access by default
         }
     }
+}
+
+public class PermissionCheckResult
+{
+    public bool Success { get; set; }
+    public bool? Data { get; set; }
+    public string? Code { get; set; }
+    public string? Message { get; set; }
 }
 
 public static class PermissionAuthorizationExtensions
