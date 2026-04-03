@@ -19,6 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.Host.UseSerilog();
 
+builder.Services.UseEntityFramworkCore().MigrateDatabase();
 builder.ConfigureOrleansServer();
 
 var configuration = new ConfigurationBuilder()
@@ -30,8 +31,6 @@ var configuration = new ConfigurationBuilder()
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(configuration)
     .CreateLogger();
-
-builder.Services.UseEntityFramworkCore().MigrateDatabase();
 
 var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? throw new InvalidOperationException("JwtSettings not configured");
 builder.Services.AddSingleton(jwtSettings);

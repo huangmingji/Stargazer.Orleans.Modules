@@ -71,6 +71,7 @@ public class UserGrain(
             CreationTime = DateTime.UtcNow
         };
         
+        var result = await userRepository.InsertAsync(userData, cancellationToken);
         var defaultRole = await roleRepository.FindAsync(x => x.IsDefault && x.IsActive, cancellationToken);
         if (defaultRole is not null)
         {
@@ -82,10 +83,9 @@ public class UserGrain(
                 IsActive = true,
                 CreationTime = DateTime.UtcNow
             };
+            await userRoleRepository.InsertAsync(userRole, cancellationToken);
             userData.UserRoles.Add(userRole);
         }
-        
-        var result = await userRepository.InsertAsync(userData, cancellationToken);
         return result.MapToUserDto();
     }
 

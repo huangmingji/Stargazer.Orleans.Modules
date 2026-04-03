@@ -12,6 +12,7 @@ using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbMigra
 using Stargazer.Orleans.MessageManagement.Silo;
 using Stargazer.Orleans.MessageManagement.Silo.Authorization;
 using System.Text;
+using Stargazer.Orleans.MessageManagement.Silo.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();

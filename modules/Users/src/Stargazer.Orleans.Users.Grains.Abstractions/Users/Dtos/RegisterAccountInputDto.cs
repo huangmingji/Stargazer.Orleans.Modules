@@ -17,7 +17,4 @@ public class RegisterAccountInputDto
     [StringLength(100, MinimumLength = 8, ErrorMessage = "Password must be at least 8 characters")]
     [RegularExpression(@"^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$", ErrorMessage = "Password must contain at least one uppercase letter, one lowercase letter, and one digit")]
     public string Password { get; set; } = "";
-    
-    [Id(2)]
-    public string? Role { get; set; } = "User";
 }

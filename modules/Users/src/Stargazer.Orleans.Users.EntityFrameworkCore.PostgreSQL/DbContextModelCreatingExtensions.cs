@@ -30,8 +30,8 @@ public static class DbContextModelCreatingExtensions
             entity.Property(e => e.Password).HasColumnName("password").HasMaxLength(500).IsRequired();
             entity.Property(e => e.SecretKey).HasColumnName("secret_key").HasMaxLength(500);
             entity.Property(e => e.Name).HasColumnName("name").HasMaxLength(200);
-            entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(200);
-            entity.Property(e => e.PhoneNumber).HasColumnName("phone_number").HasMaxLength(20);
+            entity.Property(e => e.Email).HasColumnName("email").HasMaxLength(200).IsRequired(false);
+            entity.Property(e => e.PhoneNumber).HasColumnName("phone_number").HasMaxLength(20).IsRequired(false);
             entity.Property(e => e.Avatar).HasColumnName("avatar").HasMaxLength(500);
             entity.Property(e => e.IsActive).HasColumnName("is_active");
             entity.Property(e => e.CreatorId).HasColumnName("creator_id");
@@ -40,8 +40,8 @@ public static class DbContextModelCreatingExtensions
             entity.Property(e => e.LastModifyTime).HasColumnName("last_modify_time").IsRequired();
 
             entity.HasIndex(e => e.Account).IsUnique().HasDatabaseName("idx_sys_users_account");
-            entity.HasIndex(e => e.Email).IsUnique().HasDatabaseName("idx_sys_users_email");
-            entity.HasIndex(e => e.PhoneNumber).IsUnique().HasDatabaseName("idx_sys_users_phone_number");
+            entity.HasIndex(e => e.Email).IsUnique().HasDatabaseName("idx_sys_users_email").HasFilter("(email IS NOT NULL)");
+            entity.HasIndex(e => e.PhoneNumber).IsUnique().HasDatabaseName("idx_sys_users_phone_number").HasFilter("(phone_number IS NOT NULL)");
             entity.HasIndex(e => e.IsActive).HasDatabaseName("idx_sys_users_is_active");
             entity.HasIndex(e => e.CreationTime).HasDatabaseName("idx_sys_users_creation_time");
 

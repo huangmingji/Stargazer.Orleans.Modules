@@ -66,7 +66,7 @@ public class AccountController(
 
         var user = await userGrain.RegisterAsync(input, cancellationToken);
         
-        var (accessToken, refreshToken) = jwtTokenService.GenerateTokens(user.Id, user.Account, new List<string> { input.Role ?? "User" });
+        var (accessToken, refreshToken) = jwtTokenService.GenerateTokens(user.Id, user.Account, new List<string>());
 
         var response = new TokenResponseDto
         {

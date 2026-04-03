@@ -3,6 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Orleans.Configuration;
+using Orleans.Runtime;
+using StackExchange.Redis;
+using Stargazer.Orleans.Users.Grains.Grains;
 
 namespace Stargazer.Orleans.Users.Silo;
 
@@ -24,7 +27,18 @@ public static class OrleansServerExtension
             {
                 options.ClusterId = "users";
                 options.ServiceId = "orleans-app";
-            }).AddAdoNetGrainStorageAsDefault(options =>
+            })
+            // .AddRedisGrainStorageAsDefault(options =>
+            // {
+            //     options.ConfigurationOptions =
+            //         ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+            // })
+            // .AddRedisGrainStorage("OrleansStore",options =>
+            // {
+            //     options.ConfigurationOptions =
+            //         ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+            // })
+            .AddAdoNetGrainStorageAsDefault(options =>
             {
                 options.Invariant = "Npgsql";
                 options.ConnectionString = configuration.GetConnectionString("Users");
@@ -32,15 +46,18 @@ public static class OrleansServerExtension
             {
                 options.Invariant = "Npgsql";
                 options.ConnectionString = configuration.GetConnectionString("Users");
-            }).Configure<EndpointOptions>(options =>
+            })
+            .Configure<EndpointOptions>(options =>
             {
                 options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 11111);
                 options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 30000);
                 options.AdvertisedIPAddress = IPAddress.Loopback;
                 options.SiloPort = 11111;
                 options.GatewayPort = 30000;
-            }).ConfigureLogging(logging => logging.AddConsole());
+            }).ConfigureLogging(logging => logging.AddConsole())
+            .AddStartupTask<UsersSeedDataInitializer>();
         });
+        
         return builder;
     }
 }
