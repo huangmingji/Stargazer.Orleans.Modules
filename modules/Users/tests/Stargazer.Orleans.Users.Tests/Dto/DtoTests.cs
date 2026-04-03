@@ -129,20 +129,10 @@ public class RegisterAccountInputDtoTests
         {
             Account = "testuser",
             Password = "password123",
-            Role = "Admin"
         };
 
         Assert.Equal("testuser", dto.Account);
         Assert.Equal("password123", dto.Password);
-        Assert.Equal("Admin", dto.Role);
-    }
-
-    [Fact]
-    public void RegisterAccountInputDto_DefaultRoleIsUser()
-    {
-        var dto = new RegisterAccountInputDto();
-
-        Assert.Equal("User", dto.Role);
     }
 }
 
