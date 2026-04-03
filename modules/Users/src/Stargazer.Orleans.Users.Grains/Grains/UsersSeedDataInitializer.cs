@@ -9,6 +9,7 @@ using Stargazer.Orleans.Users.Domain.UserRoles;
 using Stargazer.Orleans.Users.Domain.Users;
 using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.Users.Grains.Abstractions;
+using Stargazer.Orleans.Users.Grains.Abstractions.Authorization;
 
 namespace Stargazer.Orleans.Users.Grains.Grains;
 
@@ -44,22 +45,22 @@ public class UsersSeedDataInitializer(
     {
         var permissionCodes = new List<(string Name, string Code, string Category, string Description)>
         {
-            ("用户管理", "users.view", "用户管理", "查看用户列表"),
-            ("创建用户", "users.create", "用户管理", "创建新用户"),
-            ("编辑用户", "users.edit", "用户管理", "编辑用户信息"),
-            ("删除用户", "users.delete", "用户管理", "删除用户"),
+            ("用户管理", AuthorizationPermissions.Users.View, "用户管理", "查看用户列表"),
+            ("创建用户", AuthorizationPermissions.Users.Create, "用户管理", "创建新用户"),
+            ("编辑用户", AuthorizationPermissions.Users.Update, "用户管理", "编辑用户信息"),
+            ("删除用户", AuthorizationPermissions.Users.Delete, "用户管理", "删除用户"),
             ("分配角色", "users.assign_role", "用户管理", "为用户分配角色"),
             
-            ("角色管理", "roles.view", "角色管理", "查看角色列表"),
-            ("创建角色", "roles.create", "角色管理", "创建新角色"),
-            ("编辑角色", "roles.edit", "角色管理", "编辑角色信息"),
-            ("删除角色", "roles.delete", "角色管理", "删除角色"),
+            ("角色管理", AuthorizationPermissions.Roles.View, "角色管理", "查看角色列表"),
+            ("创建角色", AuthorizationPermissions.Roles.Create, "角色管理", "创建新角色"),
+            ("编辑角色", AuthorizationPermissions.Roles.Update, "角色管理", "编辑角色信息"),
+            ("删除角色", AuthorizationPermissions.Roles.Delete, "角色管理", "删除角色"),
             ("分配权限", "roles.assign_permission", "角色管理", "为角色分配权限"),
             
-            ("权限管理", "permissions.view", "权限管理", "查看权限列表"),
-            ("创建权限", "permissions.create", "权限管理", "创建新权限"),
-            ("编辑权限", "permissions.edit", "权限管理", "编辑权限信息"),
-            ("删除权限", "permissions.delete", "权限管理", "删除权限"),
+            ("权限管理", AuthorizationPermissions.Permissions.View, "权限管理", "查看权限列表"),
+            ("创建权限", AuthorizationPermissions.Permissions.Create, "权限管理", "创建新权限"),
+            ("编辑权限", AuthorizationPermissions.Permissions.Update, "权限管理", "编辑权限信息"),
+            ("删除权限", AuthorizationPermissions.Permissions.Delete, "权限管理", "删除权限")
         };
 
         foreach (var (name, code, category, description) in permissionCodes)

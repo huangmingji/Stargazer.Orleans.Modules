@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.Users.Grains.Abstractions;
+using Stargazer.Orleans.Users.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.Users.Grains.Abstractions.Users;
 using Stargazer.Orleans.Users.Grains.Abstractions.Users.Dtos;
 
@@ -35,7 +36,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpGet("{id:guid}")]
-    [Authorize(policy: "permission:user.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
     public async Task<IActionResult> GetUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -50,7 +51,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpGet]
-    [Authorize(policy: "permission:user.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
     public async Task<IActionResult> GetUsers([FromQuery] string? keyword, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -59,7 +60,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPost]
-    [Authorize(policy: "permission:user.create")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Create}")]
     public async Task<IActionResult> CreateUser([FromBody] CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -68,7 +69,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPut("{id:guid}")]
-    [Authorize(policy: "permission:user.update")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -77,7 +78,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpDelete("{id:guid}")]
-    [Authorize(policy: "permission:user.delete")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Delete}")]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -92,7 +93,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPost("{id:guid}/roles")]
-    [Authorize(policy: "permission:user.assign")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Assign}")]
     public async Task<IActionResult> AssignRoles(Guid id, [FromBody] List<Guid> roleIds, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -107,7 +108,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpGet("{id:guid}/roles")]
-    [Authorize(policy: "permission:user.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
     public async Task<IActionResult> GetUserRoles(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -116,7 +117,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpGet("{id:guid}/permissions")]
-    [Authorize(policy: "permission:user.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
     public async Task<IActionResult> GetUserPermissions(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -125,7 +126,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPost("{id:guid}/disable")]
-    [Authorize(policy: "permission:user.update")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
     public async Task<IActionResult> DisableUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
@@ -140,7 +141,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     }
     
     [HttpPost("{id:guid}/enable")]
-    [Authorize(policy: "permission:user.update")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
     public async Task<IActionResult> EnableUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);

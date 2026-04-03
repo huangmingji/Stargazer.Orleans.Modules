@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.Users.Grains.Abstractions;
+using Stargazer.Orleans.Users.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.Users.Grains.Abstractions.Roles;
 using Stargazer.Orleans.Users.Grains.Abstractions.Roles.Dtos;
 
@@ -15,7 +16,7 @@ public class PermissionController(IClusterClient client, ILogger<PermissionContr
     private readonly IClusterClient _client = client;
     
     [HttpGet]
-    [Authorize(policy: "permission:permission.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Permissions.View}")]
     public async Task<IActionResult> GetPermissions([FromQuery] string? keyword, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
         var permissionGrain = _client.GetGrain<IPermissionGrain>(0);
@@ -24,7 +25,7 @@ public class PermissionController(IClusterClient client, ILogger<PermissionContr
     }
     
     [HttpGet("{id:guid}")]
-    [Authorize(policy: "permission:permission.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Permissions.View}")]
     public async Task<IActionResult> GetPermission(Guid id, CancellationToken cancellationToken = default)
     {
         var permissionGrain = _client.GetGrain<IPermissionGrain>(0);
@@ -37,7 +38,7 @@ public class PermissionController(IClusterClient client, ILogger<PermissionContr
     }
     
     [HttpPost]
-    [Authorize(policy: "permission:permission.manage")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Permissions.Create}")]
     public async Task<IActionResult> CreatePermission([FromBody] PermissionDataDto input, CancellationToken cancellationToken = default)
     {
         var permissionGrain = _client.GetGrain<IPermissionGrain>(0);
@@ -46,7 +47,7 @@ public class PermissionController(IClusterClient client, ILogger<PermissionContr
     }
     
     [HttpPut("{id:guid}")]
-    [Authorize(policy: "permission:permission.manage")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Permissions.Update}")]
     public async Task<IActionResult> UpdatePermission(Guid id, [FromBody] PermissionDataDto input, CancellationToken cancellationToken = default)
     {
         var permissionGrain = _client.GetGrain<IPermissionGrain>(0);
@@ -55,7 +56,7 @@ public class PermissionController(IClusterClient client, ILogger<PermissionContr
     }
     
     [HttpDelete("{id:guid}")]
-    [Authorize(policy: "permission:permission.manage")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Permissions.Delete}")]
     public async Task<IActionResult> DeletePermission(Guid id, CancellationToken cancellationToken = default)
     {
         var permissionGrain = _client.GetGrain<IPermissionGrain>(0);
@@ -68,7 +69,7 @@ public class PermissionController(IClusterClient client, ILogger<PermissionContr
     }
     
     [HttpGet("category/{category}")]
-    [Authorize(policy: "permission:permission.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Permissions.View}")]
     public async Task<IActionResult> GetPermissionsByCategory(string category, CancellationToken cancellationToken = default)
     {
         var permissionGrain = _client.GetGrain<IPermissionGrain>(0);

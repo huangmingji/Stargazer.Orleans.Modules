@@ -21,9 +21,17 @@ public static class OrleansServerExtension
         
         builder.UseOrleans(siloBuilder =>
         {
+            if (builder.Environment.IsDevelopment())
+            {
+                siloBuilder.UseLocalhostClustering();
+            }
+            else
+            {
+                siloBuilder.UseRedisClustering(configuration.GetConnectionString("Redis"));
+            }
+
             // 配置集群选项
-            siloBuilder.UseRedisClustering(configuration.GetConnectionString("Redis"))
-            .Configure<ClusterOptions>(options =>
+            siloBuilder.Configure<ClusterOptions>(options =>
             {
                 options.ClusterId = "users";
                 options.ServiceId = "orleans-app";
