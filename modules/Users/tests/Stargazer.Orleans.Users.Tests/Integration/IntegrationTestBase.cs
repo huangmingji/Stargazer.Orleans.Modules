@@ -81,6 +81,20 @@ public class IntegrationTestBase : IClassFixture<TestWebApplicationFactory>, IAs
         var response = await Client.SendAsync(request);
         return await ParseResponseAsync<T>(response);
     }
+    
+    protected async Task<(bool Success, T? Data, string? ErrorCode)> PatchAsync<T>(
+        string url, object? body = null)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Patch, url);
+        if (body != null)
+        {
+            request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        }
+        ApplyAuthHeader(request);
+
+        var response = await Client.SendAsync(request);
+        return await ParseResponseAsync<T>(response);
+    }
 
     protected async Task<(bool Success, T? Data, string? ErrorCode)> DeleteAsync<T>(string url)
     {
