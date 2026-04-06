@@ -21,41 +21,41 @@ public static class OrleansServerExtension
         
         builder.UseOrleans(siloBuilder =>
         {
-            if (builder.Environment.IsDevelopment())
-            {
-                siloBuilder.UseLocalhostClustering();
-            }
-            else
-            {
-                siloBuilder.UseRedisClustering(configuration.GetConnectionString("Redis"));
-            }
-
             // 配置集群选项
             siloBuilder.Configure<ClusterOptions>(options =>
             {
                 options.ClusterId = "users";
                 options.ServiceId = "orleans-app";
-            })
-            // .AddRedisGrainStorageAsDefault(options =>
-            // {
-            //     options.ConfigurationOptions =
-            //         ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
-            // })
-            // .AddRedisGrainStorage("OrleansStore",options =>
-            // {
-            //     options.ConfigurationOptions =
-            //         ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
-            // })
-            .AddAdoNetGrainStorageAsDefault(options =>
+            });
+            
+            if (builder.Environment.IsDevelopment())
             {
-                options.Invariant = "Npgsql";
-                options.ConnectionString = configuration.GetConnectionString("Users");
-            }).AddAdoNetGrainStorage("OrleansStore", options =>
+                siloBuilder.UseLocalhostClustering()
+                    .AddRedisGrainStorageAsDefault(options =>
+                    {
+                        options.ConfigurationOptions =
+                            ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+                    })
+                    .AddRedisGrainStorage("OrleansStore", options =>
+                    {
+                        options.ConfigurationOptions =
+                            ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+                    });
+            }
+            else
             {
-                options.Invariant = "Npgsql";
-                options.ConnectionString = configuration.GetConnectionString("Users");
-            })
-            .Configure<EndpointOptions>(options =>
+                siloBuilder.UseRedisClustering(configuration.GetConnectionString("Redis"))
+                    .AddAdoNetGrainStorageAsDefault(options =>
+                    {
+                        options.Invariant = "Npgsql";
+                        options.ConnectionString = configuration.GetConnectionString("Users");
+                    }).AddAdoNetGrainStorage("OrleansStore", options =>
+                    {
+                        options.Invariant = "Npgsql";
+                        options.ConnectionString = configuration.GetConnectionString("Users");
+                    });
+            }
+            siloBuilder.Configure<EndpointOptions>(options =>
             {
                 options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 11111);
                 options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 30000);

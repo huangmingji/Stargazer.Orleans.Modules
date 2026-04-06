@@ -29,6 +29,7 @@
     <ProjectReference Include="..\..\modules\MessageManagement\src\Stargazer.Orleans.MessageManagement.Silo\Stargazer.Orleans.MessageManagement.Silo.csproj" />
     <ProjectReference Include="..\..\modules\ObjectStorage\src\Stargazer.Orleans.ObjectStorage.Silo\Stargazer.Orleans.ObjectStorage.Silo.csproj" />
     <ProjectReference Include="..\..\modules\Users\src\Stargazer.Orleans.Users.Silo\Stargazer.Orleans.Users.Silo.csproj" />
+    <ProjectReference Include="..\..\modules\Users\tests\Stargazer.Orleans.Users.Tests\Stargazer.Orleans.Users.Tests.csproj" />
   </ItemGroup>
 
 </Project>

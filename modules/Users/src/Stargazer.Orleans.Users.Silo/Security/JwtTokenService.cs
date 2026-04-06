@@ -10,7 +10,7 @@ namespace Stargazer.Orleans.Users.Silo.Security;
 public interface IJwtTokenService
 {
     string GenerateAccessToken(Guid userId, string account, IEnumerable<string> roles);
-    string GenerateRefreshToken();
+    string GenerateRefreshToken(Guid userId, string account);
     ClaimsPrincipal? ValidateToken(string token);
     (string accessToken, string refreshToken) GenerateTokens(Guid userId, string account, IEnumerable<string> roles);
 }
@@ -68,12 +68,28 @@ public class JwtTokenService : IJwtTokenService
         return tokenHandler.WriteToken(token);
     }
 
-    public string GenerateRefreshToken()
+    public string GenerateRefreshToken(Guid userId, string account)
     {
-        var randomNumber = new byte[64];
-        using var rng = RandomNumberGenerator.Create();
-        rng.GetBytes(randomNumber);
-        return Convert.ToBase64String(randomNumber);
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+            new("userId", userId.ToString()),
+            new("account", account)
+        };
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddDays(_settings.RefreshTokenExpiryDays),
+            Issuer = _settings.Issuer,
+            Audience = _settings.Audience,
+            SigningCredentials = new SigningCredentials(_securityKey, SecurityAlgorithms.HmacSha256)
+        };
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        return tokenHandler.WriteToken(token);
     }
 
     public ClaimsPrincipal? ValidateToken(string token)
@@ -95,7 +111,7 @@ public class JwtTokenService : IJwtTokenService
     public (string accessToken, string refreshToken) GenerateTokens(Guid userId, string account, IEnumerable<string> roles)
     {
         var accessToken = GenerateAccessToken(userId, account, roles);
-        var refreshToken = GenerateRefreshToken();
+        var refreshToken = GenerateRefreshToken(userId, account);
         return (accessToken, refreshToken);
     }
 }

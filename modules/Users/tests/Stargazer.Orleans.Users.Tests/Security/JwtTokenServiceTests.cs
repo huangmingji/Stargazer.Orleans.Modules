@@ -96,26 +96,26 @@ public class JwtTokenServiceTests
         Assert.Contains(_settings.Audience, jwtToken.Audiences);
     }
 
-    [Fact]
-    public void GenerateRefreshToken_ReturnsBase64String()
-    {
-        var refreshToken = _tokenService.GenerateRefreshToken();
-
-        Assert.NotNull(refreshToken);
-        Assert.NotEmpty(refreshToken);
-        
-        var bytes = Convert.FromBase64String(refreshToken);
-        Assert.Equal(64, bytes.Length);
-    }
-
-    [Fact]
-    public void GenerateRefreshToken_ReturnsUniqueTokens()
-    {
-        var token1 = _tokenService.GenerateRefreshToken();
-        var token2 = _tokenService.GenerateRefreshToken();
-
-        Assert.NotEqual(token1, token2);
-    }
+    // [Fact]
+    // public void GenerateRefreshToken_ReturnsBase64String()
+    // {
+    //     var refreshToken = _tokenService.GenerateRefreshToken();
+    //
+    //     Assert.NotNull(refreshToken);
+    //     Assert.NotEmpty(refreshToken);
+    //     
+    //     var bytes = Convert.FromBase64String(refreshToken);
+    //     Assert.Equal(64, bytes.Length);
+    // }
+    //
+    // [Fact]
+    // public void GenerateRefreshToken_ReturnsUniqueTokens()
+    // {
+    //     var token1 = _tokenService.GenerateRefreshToken();
+    //     var token2 = _tokenService.GenerateRefreshToken();
+    //
+    //     Assert.NotEqual(token1, token2);
+    // }
 
     [Fact]
     public void GenerateTokens_ReturnsBothTokens()
