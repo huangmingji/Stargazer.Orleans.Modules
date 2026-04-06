@@ -39,6 +39,8 @@ public interface IUserGrain : IGrainWithIntegerKey
     
     Task<bool> EnableUserAsync(Guid id, CancellationToken cancellationToken = default);
     
+    Task<bool> UpdateUserStatusAsync(Guid id, UpdateUserStatusInputDto input, CancellationToken cancellationToken = default);
+    
     Task<UserDataDto?> GetUserProfileAsync(Guid id, CancellationToken cancellationToken = default);
     
     Task<bool> AssignRolesAsync(Guid userId, List<Guid> roleIds, CancellationToken cancellationToken = default);

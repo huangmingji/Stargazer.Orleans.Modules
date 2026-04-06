@@ -125,68 +125,53 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
         return Ok(ResponseData.Success(data: permissions));
     }
     
-    [HttpPost("{id:guid}/disable")]
+    [HttpPatch("{id:guid}/status")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
-    public async Task<IActionResult> DisableUser(Guid id, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusInputDto input, CancellationToken cancellationToken = default)
     {
         var userGrain = _client.GetGrain<IUserGrain>(0);
-        var result = await userGrain.DisableUserAsync(id, cancellationToken);
+        var result = await userGrain.UpdateUserStatusAsync(id, input, cancellationToken);
         
         if (!result)
         {
             return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
         }
         
-        return Ok(ResponseData.Success(message: "User disabled successfully."));
+        return Ok(ResponseData.Success(message: $"User {(input.IsEnabled ? "enabled" : "disabled")} successfully."));
     }
     
-    [HttpPost("{id:guid}/enable")]
-    [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
-    public async Task<IActionResult> EnableUser(Guid id, CancellationToken cancellationToken = default)
-    {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
-        var result = await userGrain.EnableUserAsync(id, cancellationToken);
-        
-        if (!result)
-        {
-            return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
-        }
-        
-        return Ok(ResponseData.Success(message: "User enabled successfully."));
-    }
-    
-    [HttpGet("check/account/{account}")]
-    public async Task<IActionResult> CheckAccountExists(string account, CancellationToken cancellationToken = default)
-    {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
-        var exists = await userGrain.AccountExistedAsync(account, cancellationToken);
-        return Ok(ResponseData.Success(data: exists));
-    }
-    
-    [HttpGet("check/email/{email}")]
-    public async Task<IActionResult> CheckEmailExists(string email, CancellationToken cancellationToken = default)
-    {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
-        var exists = await userGrain.EmailExistedAsync(email, cancellationToken);
-        return Ok(ResponseData.Success(data: exists));
-    }
-    
-    [HttpPost("has-permission")]
-    public async Task<IActionResult> HasPermission([FromBody] HasPermissionRequest request, CancellationToken cancellationToken = default)
-    {
-        if (request.UserId == Guid.Empty || string.IsNullOrWhiteSpace(request.Permission))
-        {
-            return BadRequest(ResponseData.Fail(code: "invalid_request", message: "UserId and Permission are required."));
-        }
-
-        var userGrain = _client.GetGrain<IUserGrain>(0);
-        var hasPermission = await userGrain.HasPermissionAsync(request.UserId, request.Permission, cancellationToken);
-        return Ok(ResponseData.Success(data: hasPermission));
-    }
+    // [HttpGet("check/account/{account}")]
+    // public async Task<IActionResult> CheckAccountExists(string account, CancellationToken cancellationToken = default)
+    // {
+    //     var userGrain = _client.GetGrain<IUserGrain>(0);
+    //     var exists = await userGrain.AccountExistedAsync(account, cancellationToken);
+    //     return Ok(ResponseData.Success(data: exists));
+    // }
+    //
+    // [HttpGet("check/email/{email}")]
+    // public async Task<IActionResult> CheckEmailExists(string email, CancellationToken cancellationToken = default)
+    // {
+    //     var userGrain = _client.GetGrain<IUserGrain>(0);
+    //     var exists = await userGrain.EmailExistedAsync(email, cancellationToken);
+    //     return Ok(ResponseData.Success(data: exists));
+    // }
+    //
+    // [HttpPost("has-permission")]
+    // public async Task<IActionResult> HasPermission([FromBody] HasPermissionRequest request, CancellationToken cancellationToken = default)
+    // {
+    //     if (request.UserId == Guid.Empty || string.IsNullOrWhiteSpace(request.Permission))
+    //     {
+    //         return BadRequest(ResponseData.Fail(code: "invalid_request", message: "UserId and Permission are required."));
+    //     }
+    //
+    //     var userGrain = _client.GetGrain<IUserGrain>(0);
+    //     var hasPermission = await userGrain.HasPermissionAsync(request.UserId, request.Permission, cancellationToken);
+    //     return Ok(ResponseData.Success(data: hasPermission));
+    // }
 }
-
-public class HasPermissionRequest
-{
-    public Guid UserId { get; set; }
-    public string Permission { get; set; } = string.Empty;
-}
+//
+// public class HasPermissionRequest
+// {
+//     public Guid UserId { get; set; }
+//     public string Permission { get; set; } = string.Empty;
+// }

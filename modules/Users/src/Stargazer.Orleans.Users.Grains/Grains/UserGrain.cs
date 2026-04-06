@@ -227,6 +227,17 @@ public class UserGrain(
         return true;
     }
 
+    public async Task<bool> UpdateUserStatusAsync(Guid id, UpdateUserStatusInputDto input, CancellationToken cancellationToken = default)
+    {
+        var userData = await userRepository.FindAsync(id, cancellationToken);
+        if (userData is null) return false;
+        
+        userData.IsActive = input.IsEnabled;
+        userData.LastModifyTime = DateTime.UtcNow;
+        await userRepository.UpdateAsync(userData, cancellationToken);
+        return true;
+    }
+
     public async Task<UserDataDto?> GetUserProfileAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var userData = await userRepository.FindAsync(id, cancellationToken);
