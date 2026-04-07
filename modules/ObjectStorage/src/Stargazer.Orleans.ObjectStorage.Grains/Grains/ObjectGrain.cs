@@ -32,6 +32,16 @@ public class ObjectGrain(
         var existingObject = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key, cancellationToken);
         long originalSize = existingObject?.Size ?? 0;
 
+        if (content.Length > bucket.MaxObjectSize)
+        {
+            throw new InvalidOperationException($"Object size exceeds the maximum allowed size of {bucket.MaxObjectSize} bytes");
+        }
+
+        if (existingObject == null && bucket.CurrentObjectCount >= bucket.MaxObjectCount)
+        {
+            throw new InvalidOperationException($"Bucket has reached the maximum object count limit of {bucket.MaxObjectCount}");
+        }
+
         var objectMetadata = new ObjectMetadata
         {
             ContentType = contentType,
@@ -215,6 +225,12 @@ public class ObjectGrain(
             throw new InvalidOperationException("Bucket not found");
         }
 
+        var existingObject = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key, cancellationToken);
+        if (existingObject == null && bucket.CurrentObjectCount >= bucket.MaxObjectCount)
+        {
+            throw new InvalidOperationException($"Bucket has reached the maximum object count limit of {bucket.MaxObjectCount}");
+        }
+
         var objectMetadata = new ObjectMetadata
         {
             ContentType = contentType,
@@ -301,9 +317,14 @@ public class ObjectGrain(
             ETag = p.ETag
         }).ToList();
 
+        var totalSize = multipart.Parts.Sum(p => p.Size);
+        if (totalSize > bucket.MaxObjectSize)
+        {
+            throw new InvalidOperationException($"Object size exceeds the maximum allowed size of {bucket.MaxObjectSize} bytes");
+        }
+
         await storageProvider.CompleteMultipartUploadAsync(bucket.Name, key, uploadId, partEtags, cancellationToken);
 
-        var totalSize = multipart.Parts.Sum(p => p.Size);
         var etag = Guid.NewGuid().ToString("N");
         var now = DateTime.UtcNow;
 

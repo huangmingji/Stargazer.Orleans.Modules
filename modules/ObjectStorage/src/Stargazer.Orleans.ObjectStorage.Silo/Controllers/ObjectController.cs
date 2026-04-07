@@ -177,18 +177,25 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return BadRequest(ResponseData.Fail(code: "invalid_file", message: "File is required."));
         }
 
-        await using var stream = file.OpenReadStream();
-        var objectGrain = client.GetGrain<IObjectGrain>(0);
-        
-        var result = await objectGrain.UploadAsync(
-            bucketId, 
-            key, 
-            stream, 
-            contentType ?? file.ContentType ?? "application/octet-stream",
-            null,
-            cancellationToken);
-        
-        return CreatedAtAction(nameof(DownloadObject), new { bucketId, key }, ResponseData.Success(data: result));
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var objectGrain = client.GetGrain<IObjectGrain>(0);
+            
+            var result = await objectGrain.UploadAsync(
+                bucketId, 
+                key, 
+                stream, 
+                contentType ?? file.ContentType ?? "application/octet-stream",
+                null,
+                cancellationToken);
+            
+            return CreatedAtAction(nameof(DownloadObject), new { bucketId, key }, ResponseData.Success(data: result));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
+        }
     }
 
     /// <summary>
@@ -215,18 +222,25 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return BadRequest(ResponseData.Fail(code: "invalid_file", message: "File is required."));
         }
 
-        await using var stream = file.OpenReadStream();
-        var objectGrain = client.GetGrain<IObjectGrain>(0);
-        
-        var result = await objectGrain.UploadAsync(
-            bucketId, 
-            key, 
-            stream, 
-            contentType ?? file.ContentType ?? "application/octet-stream",
-            null,
-            cancellationToken);
-        
-        return Ok(ResponseData.Success(data: result));
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var objectGrain = client.GetGrain<IObjectGrain>(0);
+            
+            var result = await objectGrain.UploadAsync(
+                bucketId, 
+                key, 
+                stream, 
+                contentType ?? file.ContentType ?? "application/octet-stream",
+                null,
+                cancellationToken);
+            
+            return Ok(ResponseData.Success(data: result));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
+        }
     }
 
     /// <summary>
@@ -306,9 +320,16 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = client.GetGrain<IObjectGrain>(0);
-        var result = await objectGrain.InitiateMultipartUploadAsync(bucketId, key, request.ContentType, request.Metadata, cancellationToken);
-        return Ok(ResponseData.Success(data: result));
+        try
+        {
+            var objectGrain = client.GetGrain<IObjectGrain>(0);
+            var result = await objectGrain.InitiateMultipartUploadAsync(bucketId, key, request.ContentType, request.Metadata, cancellationToken);
+            return Ok(ResponseData.Success(data: result));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
+        }
     }
 
     /// <summary>
@@ -336,11 +357,18 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return BadRequest(ResponseData.Fail(code: "invalid_file", message: "File is required."));
         }
 
-        await using var stream = file.OpenReadStream();
-        var objectGrain = client.GetGrain<IObjectGrain>(0);
-        
-        var result = await objectGrain.UploadPartAsync(bucketId, key, uploadId, partNumber, stream, cancellationToken);
-        return Ok(ResponseData.Success(data: result));
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            var objectGrain = client.GetGrain<IObjectGrain>(0);
+            
+            var result = await objectGrain.UploadPartAsync(bucketId, key, uploadId, partNumber, stream, cancellationToken);
+            return Ok(ResponseData.Success(data: result));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
+        }
     }
 
     /// <summary>
