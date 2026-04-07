@@ -17,6 +17,8 @@ public interface IObjectGrain : IGrainWithIntegerKey
     
     Task<List<ObjectMetadataDto>> ListObjectsAsync(Guid bucketId, string? prefix, CancellationToken cancellationToken = default);
     
+    Task<PageResult<ObjectMetadataDto>> ListObjectsAsync(Guid bucketId, string? prefix, int pageIndex, int pageSize, CancellationToken cancellationToken = default);
+    
     Task<SignedUrlDto> GetSignedUrlAsync(Guid bucketId, string key, TimeSpan expiry, string method, CancellationToken cancellationToken = default);
     
     // Multipart upload

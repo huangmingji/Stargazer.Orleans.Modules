@@ -240,6 +240,46 @@ public class ObjectGrain(
         }).ToList();
     }
 
+    public async Task<PageResult<ObjectMetadataDto>> ListObjectsAsync(Guid bucketId, string? prefix, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
+    {
+        if (pageIndex < 1) pageIndex = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 1000) pageSize = 1000;
+
+        Expression<Func<ObjectInfoEntity, bool>> predicate = x => x.BucketId == bucketId && !x.IsDeleted;
+        
+        var allObjects = await objectRepository.FindListAsync(predicate, cancellationToken);
+
+        if (!string.IsNullOrEmpty(prefix))
+        {
+            allObjects = allObjects.Where(x => x.Key.StartsWith(prefix)).ToList();
+        }
+
+        var total = allObjects.Count;
+        var pagedObjects = allObjects
+            .OrderByDescending(x => x.LastModified)
+            .Skip((pageIndex - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+
+        return new PageResult<ObjectMetadataDto>
+        {
+            Total = total,
+            Items = pagedObjects.Select(x => new ObjectMetadataDto
+            {
+                Id = x.Id,
+                Key = x.Key,
+                FileName = x.FileName,
+                ContentType = x.ContentType,
+                Size = x.Size,
+                ETag = x.ETag,
+                LastModified = x.LastModified,
+                Metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(x.Metadata) ?? new(),
+                CreationTime = x.CreationTime
+            }).ToList()
+        };
+    }
+
     public async Task<SignedUrlDto> GetSignedUrlAsync(Guid bucketId, string key, TimeSpan expiry, string method, CancellationToken cancellationToken = default)
     {
         ValidateKey(key);

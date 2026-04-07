@@ -136,11 +136,13 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// </summary>
     /// <param name="bucketId">存储桶 GUID</param>
     /// <param name="prefix">对象键前缀过滤</param>
+    /// <param name="pageIndex">页码 (默认 1)</param>
+    /// <param name="pageSize">每页数量 (默认 20, 最大 1000)</param>
     /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>对象列表</returns>
+    /// <returns>分页对象列表</returns>
     [HttpGet("{bucketId:guid}")]
     [Authorize(policy: "permission:storage.object.view")]
-    public async Task<IActionResult> ListObjects(Guid bucketId, [FromQuery] string? prefix, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> ListObjects(Guid bucketId, [FromQuery] string? prefix, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
     {
         var hasAccess = await HasBucketAccessAsync(bucketId, "Read");
         if (!hasAccess)
@@ -149,8 +151,8 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
         }
 
         var objectGrain = client.GetGrain<IObjectGrain>(0);
-        var objects = await objectGrain.ListObjectsAsync(bucketId, prefix, cancellationToken);
-        return Ok(ResponseData.Success(data: objects));
+        var result = await objectGrain.ListObjectsAsync(bucketId, prefix, pageIndex, pageSize, cancellationToken);
+        return Ok(ResponseData.Success(data: result));
     }
 
     /// <summary>
