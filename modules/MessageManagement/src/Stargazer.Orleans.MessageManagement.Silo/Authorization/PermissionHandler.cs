@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Orleans;
+using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Authorization;
+using Stargazer.Orleans.Users.Grains.Abstractions;
 using Stargazer.Orleans.Users.Grains.Abstractions.Users;
 
 namespace Stargazer.Orleans.MessageManagement.Silo.Authorization;
@@ -59,29 +61,29 @@ public static class PermissionAuthorizationExtensions
 {
     public static AuthorizationOptions AddPermissionPolicies(this AuthorizationOptions options)
     {
-        options.AddPolicy("permission:message.send", policy =>
-            policy.Requirements.Add(new PermissionRequirement("message.send")));
+        options.AddPolicy($"permission:{AuthorizationPermissions.Messages.Send}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(AuthorizationPermissions.Messages.Send)));
         
-        options.AddPolicy("permission:message.view", policy =>
-            policy.Requirements.Add(new PermissionRequirement("message.view")));
+        options.AddPolicy($"permission:{AuthorizationPermissions.Messages.View}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(AuthorizationPermissions.Messages.View)));
         
-        options.AddPolicy("permission:message.retry", policy =>
-            policy.Requirements.Add(new PermissionRequirement("message.retry")));
+        options.AddPolicy($"permission:{AuthorizationPermissions.Messages.Retry}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(AuthorizationPermissions.Messages.Retry)));
         
-        options.AddPolicy("permission:message.cancel", policy =>
-            policy.Requirements.Add(new PermissionRequirement("message.cancel")));
+        options.AddPolicy($"permission:{AuthorizationPermissions.Messages.Cancel}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(AuthorizationPermissions.Messages.Cancel)));
         
-        options.AddPolicy("permission:template.view", policy =>
-            policy.Requirements.Add(new PermissionRequirement("template.view")));
+        options.AddPolicy($"permission:{AuthorizationPermissions.Templates.View}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(AuthorizationPermissions.Templates.View)));
         
-        options.AddPolicy("permission:template.create", policy =>
-            policy.Requirements.Add(new PermissionRequirement("template.create")));
+        options.AddPolicy($"permission:{AuthorizationPermissions.Templates.Create}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(AuthorizationPermissions.Templates.Create)));
         
-        options.AddPolicy("permission:template.update", policy =>
-            policy.Requirements.Add(new PermissionRequirement("template.update")));
+        options.AddPolicy($"permission:{AuthorizationPermissions.Templates.Update}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(AuthorizationPermissions.Templates.Update)));
         
-        options.AddPolicy("permission:template.delete", policy =>
-            policy.Requirements.Add(new PermissionRequirement("template.delete")));
+        options.AddPolicy($"permission:{AuthorizationPermissions.Templates.Delete}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(AuthorizationPermissions.Templates.Delete)));
 
         return options;
     }

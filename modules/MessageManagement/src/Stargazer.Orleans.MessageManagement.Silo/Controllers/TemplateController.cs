@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.MessageManagement.Domain.Shared;
+using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates.Dtos;
 using ResponseData = Stargazer.Orleans.MessageManagement.Grains.Abstractions.ResponseData;
@@ -24,7 +25,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// </summary>
     /// <param name="input">模板创建输入</param>
     /// <returns>创建的模板详情</returns>
-    [Authorize(policy: "permission:template.create")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.Create}")]
     [HttpPost]
     public async Task<IActionResult> CreateAsync([FromBody] CreateTemplateInputDto input)
     {
@@ -60,7 +61,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// </summary>
     /// <param name="input">模板更新输入</param>
     /// <returns>更新后的模板详情</returns>
-    [Authorize(policy: "permission:template.update")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.Update}")]
     [HttpPut]
     public async Task<IActionResult> UpdateAsync([FromBody] UpdateTemplateInputDto input)
     {
@@ -91,7 +92,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// </summary>
     /// <param name="id">模板GUID</param>
     /// <returns>删除结果</returns>
-    [Authorize(policy: "permission:template.delete")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.Delete}")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsync(Guid id)
     {
@@ -112,7 +113,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// </summary>
     /// <param name="id">模板GUID</param>
     /// <returns>模板详情</returns>
-    [Authorize(policy: "permission:template.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetAsync(Guid id)
     {
@@ -140,7 +141,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <param name="code">模板代码</param>
     /// <param name="channel">消息渠道</param>
     /// <returns>模板详情</returns>
-    [Authorize(policy: "permission:template.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpGet("code/{code}")]
     public async Task<IActionResult> GetByCodeAsync(string code, [FromQuery] MessageChannel channel)
     {
@@ -167,7 +168,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// </summary>
     /// <param name="channel">消息渠道</param>
     /// <returns>模板列表</returns>
-    [Authorize(policy: "permission:template.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpGet("channel/{channel}")]
     public async Task<IActionResult> GetByChannelAsync(MessageChannel channel)
     {
@@ -192,7 +193,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <param name="page">页码（默认1）</param>
     /// <param name="pageSize">每页数量（默认20）</param>
     /// <returns>分页模板列表</returns>
-    [Authorize(policy: "permission:template.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpGet]
     public async Task<IActionResult> GetTemplatesAsync(
         [FromQuery] MessageChannel? channel,
@@ -219,7 +220,7 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <param name="id">模板GUID</param>
     /// <param name="variables">模板变量</param>
     /// <returns>渲染后的预览内容</returns>
-    [Authorize(policy: "permission:template.view")]
+    [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpPost("{id:guid}/preview")]
     public async Task<IActionResult> PreviewAsync(Guid id, [FromBody] Dictionary<string, string>? variables)
     {
