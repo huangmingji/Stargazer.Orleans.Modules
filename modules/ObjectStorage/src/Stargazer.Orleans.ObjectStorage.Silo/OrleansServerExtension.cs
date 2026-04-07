@@ -1,5 +1,6 @@
 using System.Net;
 using Orleans.Configuration;
+using StackExchange.Redis;
 using Stargazer.Orleans.ObjectStorage.Silo.Configuration;
 using Stargazer.Orleans.ObjectStorage.Silo.Storage;
 using IStorageProvider = Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Storage.IStorageProvider;
@@ -29,15 +30,25 @@ public static class OrleansServerExtension
             {
                 options.ClusterId = orleansOptions.ClusterId;
                 options.ServiceId = orleansOptions.ServiceId;
-            }).AddAdoNetGrainStorageAsDefault(options =>
+            }).AddRedisGrainStorageAsDefault(options =>
             {
-                options.Invariant = "Npgsql";
-                options.ConnectionString = configuration.GetConnectionString("ObjectStorage");
-            }).AddAdoNetGrainStorage("OrleansStore", options =>
+                options.ConfigurationOptions =
+                    ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+            }).AddRedisGrainStorage("OrleansStore", options =>
             {
-                options.Invariant = "Npgsql";
-                options.ConnectionString = configuration.GetConnectionString("ObjectStorage");
-            }).Configure<EndpointOptions>(options =>
+                options.ConfigurationOptions =
+                    ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+            })
+            // .AddAdoNetGrainStorageAsDefault(options =>
+            // {
+            //     options.Invariant = "Npgsql";
+            //     options.ConnectionString = configuration.GetConnectionString("ObjectStorage");
+            // }).AddAdoNetGrainStorage("OrleansStore", options =>
+            // {
+            //     options.Invariant = "Npgsql";
+            //     options.ConnectionString = configuration.GetConnectionString("ObjectStorage");
+            // })
+            .Configure<EndpointOptions>(options =>
             {
                 options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 11111);
                 options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 30000);

@@ -1,4 +1,5 @@
 using System.Net.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
@@ -13,9 +14,9 @@ public class SmsSenderFactory : ISmsSender
 
     public string ProviderName => "sms_factory";
 
-    public SmsSenderFactory(SmsSettings settings, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
+    public SmsSenderFactory(IConfiguration configuration, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
     {
-        _settings = settings;
+        configuration.GetSection("Message:Sms").Bind(_settings);
         _loggerFactory = loggerFactory;
         _httpClientFactory = httpClientFactory;
     }

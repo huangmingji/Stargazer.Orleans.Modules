@@ -1,5 +1,6 @@
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MimeKit;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
@@ -16,9 +17,9 @@ public class SmtpEmailSender : IEmailSender
 
     public string ProviderName => "smtp";
 
-    public SmtpEmailSender(SmtpSettings settings, ILogger<SmtpEmailSender> logger)
+    public SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEmailSender> logger)
     {
-        _settings = settings;
+        configuration.GetSection("Message:Email").Bind(_settings);
         _logger = logger;
     }
 

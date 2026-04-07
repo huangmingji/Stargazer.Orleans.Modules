@@ -110,7 +110,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="key">对象键</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对象元数据</returns>
-    [HttpGet("{bucketId:guid}/{*key}/metadata")]
+    [HttpGet("metadata/{bucketId:guid}/{*key}")]
     [Authorize(policy: "permission:storage.object.view")]
     public async Task<IActionResult> GetObjectMetadata(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
@@ -291,7 +291,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="method">HTTP 方法 (GET/PUT/DELETE 等)</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>签名 URL</returns>
-    [HttpGet("{bucketId:guid}/{*key}/signed-url")]
+    [HttpGet("signed-url/{bucketId:guid}/{*key}")]
     [Authorize(policy: "permission:storage.object.view")]
     public async Task<IActionResult> GetSignedUrl(Guid bucketId, string key, [FromQuery] TimeSpan expiry, [FromQuery] string method = "GET", CancellationToken cancellationToken = default)
     {
@@ -320,7 +320,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="request">请求参数</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>分片上传信息</returns>
-    [HttpPost("{bucketId:guid}/{*key}/multipart/initiate")]
+    [HttpPost("multipart/initiate/{bucketId:guid}/{*key}")]
     [Authorize(policy: "permission:storage.object.create")]
     public async Task<IActionResult> InitiateMultipartUpload(Guid bucketId, string key, [FromBody] InitiateMultipartUploadRequest request, CancellationToken cancellationToken = default)
     {
@@ -352,7 +352,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="partNumber">分片编号 (从 1 开始)</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>分片上传结果</returns>
-    [HttpPost("{bucketId:guid}/{*key}/multipart/{uploadId}/part")]
+    [HttpPost("multipart/part/{bucketId:guid}/{uploadId}/{*key}")]
     [Authorize(policy: "permission:storage.object.create")]
     public async Task<IActionResult> UploadPart(Guid bucketId, string key, string uploadId, [FromForm] IFormFile file, [FromForm] int partNumber, CancellationToken cancellationToken = default)
     {
@@ -394,7 +394,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="request">请求参数，包含所有分片信息</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>上传结果</returns>
-    [HttpPost("{bucketId:guid}/{*key}/multipart/{uploadId}/complete")]
+    [HttpPost("multipart/complete/{bucketId:guid}/{uploadId}/{*key}")]
     [Authorize(policy: "permission:storage.object.create")]
     public async Task<IActionResult> CompleteMultipartUpload(Guid bucketId, string key, string uploadId, [FromBody] CompleteMultipartUploadRequest request, CancellationToken cancellationToken = default)
     {
@@ -429,7 +429,7 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="uploadId">分片上传 ID</param>
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>取消结果</returns>
-    [HttpDelete("{bucketId:guid}/{*key}/multipart/{uploadId}")]
+    [HttpDelete("multipart/{bucketId:guid}/{uploadId}/{*key}")]
     [Authorize(policy: "permission:storage.object.delete")]
     public async Task<IActionResult> AbortMultipartUpload(Guid bucketId, string key, string uploadId, CancellationToken cancellationToken = default)
     {

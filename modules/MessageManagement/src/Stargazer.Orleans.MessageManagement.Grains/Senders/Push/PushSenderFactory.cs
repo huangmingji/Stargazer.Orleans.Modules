@@ -1,24 +1,35 @@
 using System.Net.Http;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
 
 namespace Stargazer.Orleans.MessageManagement.Grains.Senders.Push;
 
-public class PushSenderFactory(PushSettings settings, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory) : IPushSender
+public class PushSenderFactory : IPushSender
 {
+    private readonly PushSettings _settings;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly IHttpClientFactory _httpClientFactory;
+
+    public PushSenderFactory(IConfiguration configuration, ILoggerFactory _loggerFactory, IHttpClientFactory httpClientFactory)
+    {
+        configuration.GetSection("Message:Push").Bind(_settings);
+        _loggerFactory = _loggerFactory;
+        _httpClientFactory = httpClientFactory;
+    }
     public string ProviderName => "push_factory";
 
     private IPushSender GetProvider(string? providerName = null)
     {
-        var name = providerName ?? settings.DefaultProvider?.ToLower() ?? "jpush";
-        var httpClient = httpClientFactory.CreateClient("JPush");
+        var name = providerName ?? _settings.DefaultProvider?.ToLower() ?? "jpush";
+        var httpClient = _httpClientFactory.CreateClient("JPush");
         
         return name switch
         {
-            "jpush" when settings.JPush != null => new JPushSender(settings.JPush, loggerFactory.CreateLogger<JPushSender>(), httpClient),
-            "umeng" when settings.Umeng != null => new UmengSender(settings.Umeng, loggerFactory.CreateLogger<UmengSender>(), httpClient),
-            _ when settings.JPush != null => new JPushSender(settings.JPush, loggerFactory.CreateLogger<JPushSender>(), httpClient),
+            "jpush" when _settings.JPush != null => new JPushSender(_settings.JPush, _loggerFactory.CreateLogger<JPushSender>(), httpClient),
+            "umeng" when _settings.Umeng != null => new UmengSender(_settings.Umeng, _loggerFactory.CreateLogger<UmengSender>(), httpClient),
+            _ when _settings.JPush != null => new JPushSender(_settings.JPush, _loggerFactory.CreateLogger<JPushSender>(), httpClient),
             _ => throw new NotSupportedException($"Push provider '{name}' is not configured or not supported.")
         };
     }

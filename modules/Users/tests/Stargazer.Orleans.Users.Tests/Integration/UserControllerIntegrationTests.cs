@@ -60,7 +60,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         });
 
         SetAuthToken(data!.AccessToken);
-        var (success, userData, _) = await GetAsync<UserDataDto>("api/user/current");
+        var (success, userData, _) = await GetAsync<UserDataDto>("api/current-user");
 
         Assert.True(success);
         Assert.NotNull(userData);
