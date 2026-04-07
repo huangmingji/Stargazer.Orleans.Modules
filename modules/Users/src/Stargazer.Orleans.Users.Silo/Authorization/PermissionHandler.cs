@@ -39,7 +39,7 @@ public class PermissionHandler : AuthorizationHandler<PermissionRequirement>
         {
             return;
         }
-
+        
         var userGrain = _client.GetGrain<IUserGrain>(0);
         var hasPermission = await userGrain.HasPermissionAsync(userId, requirement.Permission, CancellationToken.None);
 

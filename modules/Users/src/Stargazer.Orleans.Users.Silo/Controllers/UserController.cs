@@ -13,33 +13,11 @@ namespace Stargazer.Orleans.Users.Silo.Controllers;
 [Authorize]
 public class UserController(IClusterClient client, ILogger<UserController> logger) : ControllerBase
 {
-    private readonly IClusterClient _client = client;
-
-    [HttpGet("current")]
-    public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken = default)
-    {
-        var userIdClaim = User.FindFirst("userId");
-        if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-        {
-            return BadRequest(ResponseData.Fail(code: "invalid_token", message: "Invalid token."));
-        }
-
-        var userGrain = _client.GetGrain<IUserGrain>(0);
-        var user = await userGrain.GetUserDataAsync(userId, cancellationToken);
-        
-        if (user == null)
-        {
-            return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
-        }
-        
-        return Ok(ResponseData.Success(data: user));
-    }
-    
     [HttpGet("{id:guid}")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
     public async Task<IActionResult> GetUser(Guid id, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         var user = await userGrain.GetUserDataAsync(id, cancellationToken);
         
         if (user == null)
@@ -54,7 +32,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
     public async Task<IActionResult> GetUsers([FromQuery] string? keyword, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         var result = await userGrain.GetUsersAsync(keyword, pageIndex, pageSize, cancellationToken);
         return Ok(ResponseData.Success(data: result));
     }
@@ -63,7 +41,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Create}")]
     public async Task<IActionResult> CreateUser([FromBody] CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         await userGrain.CreateUserAsync(input, cancellationToken);
         return Ok(ResponseData.Success(message: "User created successfully."));
     }
@@ -72,7 +50,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         await userGrain.UpdateUserAsync(id, input, cancellationToken);
         return Ok(ResponseData.Success(message: "User updated successfully."));
     }
@@ -81,7 +59,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Delete}")]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         var result = await userGrain.DeleteUserAsync(id, cancellationToken);
         
         if (!result)
@@ -96,7 +74,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Assign}")]
     public async Task<IActionResult> AssignRoles(Guid id, [FromBody] List<Guid> roleIds, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         var result = await userGrain.AssignRolesAsync(id, roleIds, cancellationToken);
         
         if (!result)
@@ -111,7 +89,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
     public async Task<IActionResult> GetUserRoles(Guid id, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         var roles = await userGrain.GetUserRolesAsync(id, cancellationToken);
         return Ok(ResponseData.Success(data: roles));
     }
@@ -120,7 +98,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
     public async Task<IActionResult> GetUserPermissions(Guid id, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         var permissions = await userGrain.GetUserPermissionsAsync(id, cancellationToken);
         return Ok(ResponseData.Success(data: permissions));
     }
@@ -129,7 +107,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
     public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusInputDto input, CancellationToken cancellationToken = default)
     {
-        var userGrain = _client.GetGrain<IUserGrain>(0);
+        var userGrain = client.GetGrain<IUserGrain>(0);
         var result = await userGrain.UpdateUserStatusAsync(id, input, cancellationToken);
         
         if (!result)

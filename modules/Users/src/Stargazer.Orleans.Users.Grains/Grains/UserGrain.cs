@@ -244,6 +244,22 @@ public class UserGrain(
         return userData?.MapToUserDto();
     }
 
+    public async Task<UserDataDto?> UpdateProfileAsync(Guid id, UpdateProfileInputDto input, CancellationToken cancellationToken = default)
+    {
+        var userData = await userRepository.FindAsync(id, cancellationToken);
+        if (userData is null) return null;
+
+        userData.Name = input.Name;
+        userData.Email = input.Email;
+        userData.PhoneNumber = input.PhoneNumber;
+        userData.Avatar = input.Avatar;
+        userData.LastModifierId = id;
+        userData.LastModifyTime = DateTime.UtcNow;
+
+        await userRepository.UpdateAsync(userData, cancellationToken);
+        return userData.MapToUserDto();
+    }
+
     public async Task<bool> AssignRolesAsync(Guid userId, List<Guid> roleIds, CancellationToken cancellationToken = default)
     {
         var userData = await userRepository.FindAsync(userId, cancellationToken);
