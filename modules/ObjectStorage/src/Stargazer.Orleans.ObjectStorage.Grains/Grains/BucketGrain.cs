@@ -127,6 +127,12 @@ public class BucketGrain(
 
         return false;
     }
+
+    public async Task<bool> IsOwnerAsync(Guid bucketId, Guid userId, CancellationToken cancellationToken = default)
+    {
+        var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
+        return bucket?.OwnerId == userId;
+    }
 }
 
 internal static class BucketExtensions

@@ -19,4 +19,6 @@ public interface IBucketGrain : IGrainWithIntegerKey
     Task<List<BucketDto>> GetUserBucketsAsync(Guid userId, CancellationToken cancellationToken = default);
     
     Task<bool> HasAccessPermissionAsync(Guid bucketId, Guid userId, string action, CancellationToken cancellationToken = default);
+    
+    Task<bool> IsOwnerAsync(Guid bucketId, Guid userId, CancellationToken cancellationToken = default);
 }

@@ -146,7 +146,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
 
     /// <summary>
     /// 删除存储桶
-    /// 注意：只有空存储桶才能被删除
+    /// 注意：只有存储桶所有者才能删除，且存储桶必须为空
     /// </summary>
     /// <param name="id">存储桶 GUID</param>
     /// <param name="cancellationToken">取消令牌</param>
@@ -158,8 +158,8 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
         var userId = GetCurrentUserId();
         var bucketGrain = client.GetGrain<IBucketGrain>(0);
         
-        var hasAccess = await bucketGrain.HasAccessPermissionAsync(id, userId, "Write", cancellationToken);
-        if (!hasAccess)
+        var isOwner = await bucketGrain.IsOwnerAsync(id, userId, cancellationToken);
+        if (!isOwner)
         {
             return Forbid();
         }
