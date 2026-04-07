@@ -16,7 +16,7 @@ public class SmsSenderFactory : ISmsSender
 
     public SmsSenderFactory(IConfiguration configuration, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
     {
-        configuration.GetSection("Message:Sms").Bind(_settings);
+        _settings = configuration.GetSection("Message:Sms").Get<SmsSettings>() ?? new SmsSettings();
         _loggerFactory = loggerFactory;
         _httpClientFactory = httpClientFactory;
     }

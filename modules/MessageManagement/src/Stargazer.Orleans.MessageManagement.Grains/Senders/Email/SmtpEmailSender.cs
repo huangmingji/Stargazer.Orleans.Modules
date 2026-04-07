@@ -19,7 +19,7 @@ public class SmtpEmailSender : IEmailSender
 
     public SmtpEmailSender(IConfiguration configuration, ILogger<SmtpEmailSender> logger)
     {
-        configuration.GetSection("Message:Email").Bind(_settings);
+        _settings = configuration.GetSection("Message:Email:Smtp").Get<SmtpSettings>() ?? new SmtpSettings();
         _logger = logger;
     }
 

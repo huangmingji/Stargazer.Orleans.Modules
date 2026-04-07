@@ -12,10 +12,10 @@ public class PushSenderFactory : IPushSender
     private readonly ILoggerFactory _loggerFactory;
     private readonly IHttpClientFactory _httpClientFactory;
 
-    public PushSenderFactory(IConfiguration configuration, ILoggerFactory _loggerFactory, IHttpClientFactory httpClientFactory)
+    public PushSenderFactory(IConfiguration configuration, ILoggerFactory loggerFactory, IHttpClientFactory httpClientFactory)
     {
-        configuration.GetSection("Message:Push").Bind(_settings);
-        _loggerFactory = _loggerFactory;
+        _settings = configuration.GetSection("Message:Push").Get<PushSettings>() ?? new PushSettings();
+        _loggerFactory = loggerFactory;
         _httpClientFactory = httpClientFactory;
     }
     public string ProviderName => "push_factory";
