@@ -21,8 +21,40 @@ public class ObjectGrain(
     IStorageProvider storageProvider,
     ILogger<ObjectGrain> logger) : Grain, IObjectGrain
 {
+    private static readonly char[] InvalidKeyChars = { '\\', '\0' };
+
+    private static void ValidateKey(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            throw new ArgumentException("Object key cannot be empty or whitespace", nameof(key));
+        }
+
+        if (key.StartsWith("/") || key.StartsWith("\\"))
+        {
+            throw new ArgumentException("Object key cannot start with a forward or backward slash", nameof(key));
+        }
+
+        if (key.Contains(".."))
+        {
+            throw new ArgumentException("Object key cannot contain path traversal sequences (..)", nameof(key));
+        }
+
+        if (key.ContainsAny(InvalidKeyChars))
+        {
+            throw new ArgumentException("Object key contains invalid characters", nameof(key));
+        }
+
+        if (key.Length > 1024)
+        {
+            throw new ArgumentException("Object key cannot exceed 1024 characters", nameof(key));
+        }
+    }
+
     public async Task<UploadResultDto> UploadAsync(Guid bucketId, string key, Stream content, string contentType, Dictionary<string, string>? metadata, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {
@@ -99,6 +131,8 @@ public class ObjectGrain(
 
     public async Task<Stream?> DownloadAsync(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {
@@ -116,6 +150,8 @@ public class ObjectGrain(
 
     public async Task<bool> DeleteAsync(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {
@@ -144,6 +180,8 @@ public class ObjectGrain(
 
     public async Task<bool> ExistsAsync(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {
@@ -155,6 +193,8 @@ public class ObjectGrain(
 
     public async Task<ObjectMetadataDto?> GetMetadataAsync(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var obj = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key && !x.IsDeleted, cancellationToken);
         if (obj == null)
         {
@@ -202,6 +242,8 @@ public class ObjectGrain(
 
     public async Task<SignedUrlDto> GetSignedUrlAsync(Guid bucketId, string key, TimeSpan expiry, string method, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {
@@ -219,6 +261,8 @@ public class ObjectGrain(
 
     public async Task<InitiateMultipartUploadResultDto> InitiateMultipartUploadAsync(Guid bucketId, string key, string contentType, Dictionary<string, string>? metadata, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {
@@ -265,6 +309,8 @@ public class ObjectGrain(
 
     public async Task<UploadPartResultDto> UploadPartAsync(Guid bucketId, string key, string uploadId, int partNumber, Stream content, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {
@@ -299,6 +345,8 @@ public class ObjectGrain(
 
     public async Task<UploadResultDto> CompleteMultipartUploadAsync(Guid bucketId, string key, string uploadId, List<PartETagDto> parts, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {
@@ -375,6 +423,8 @@ public class ObjectGrain(
 
     public async Task AbortMultipartUploadAsync(Guid bucketId, string key, string uploadId, CancellationToken cancellationToken = default)
     {
+        ValidateKey(key);
+
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
         if (bucket == null)
         {

@@ -196,6 +196,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
         {
             return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
+        }
     }
 
     /// <summary>
@@ -240,6 +244,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
         catch (InvalidOperationException ex)
         {
             return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
         }
     }
 
@@ -369,6 +377,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
         {
             return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
+        }
     }
 
     /// <summary>
@@ -401,6 +413,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
         {
             return BadRequest(ResponseData.Fail(code: "multipart_failed", message: ex.Message));
         }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
+        }
     }
 
     /// <summary>
@@ -421,9 +437,16 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
             return Forbid();
         }
 
-        var objectGrain = client.GetGrain<IObjectGrain>(0);
-        await objectGrain.AbortMultipartUploadAsync(bucketId, key, uploadId, cancellationToken);
-        return Ok(ResponseData.Success(data: true));
+        try
+        {
+            var objectGrain = client.GetGrain<IObjectGrain>(0);
+            await objectGrain.AbortMultipartUploadAsync(bucketId, key, uploadId, cancellationToken);
+            return Ok(ResponseData.Success(data: true));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
+        }
     }
 }
 
