@@ -19,14 +19,16 @@ public static class OrleansServerExtension
         var storageSettings = new StorageSettings();
         configuration.GetSection("Storage").Bind(storageSettings);
 
+        var orleansOptions = configuration.GetSection("Orleans").Get<OrleansOptions>() ?? new OrleansOptions();
+
         builder.UseOrleans(siloBuilder =>
         {
-            // 配置集群选项
+            // 配置集群选项 - 统一集群
             siloBuilder.UseRedisClustering(configuration.GetConnectionString("Redis"))
             .Configure<ClusterOptions>(options =>
             {
-                options.ClusterId = "object-storage";
-                options.ServiceId = "orleans-app";
+                options.ClusterId = orleansOptions.ClusterId;
+                options.ServiceId = orleansOptions.ServiceId;
             }).AddAdoNetGrainStorageAsDefault(options =>
             {
                 options.Invariant = "Npgsql";

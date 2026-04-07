@@ -19,13 +19,15 @@ public static class OrleansServerExtension
             .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
             .Build();
         
+        var orleansOptions = configuration.GetSection("Orleans").Get<OrleansOptions>() ?? new OrleansOptions();
+        
         builder.UseOrleans(siloBuilder =>
         {
-            // 配置集群选项
+            // 配置集群选项 - 统一集群
             siloBuilder.Configure<ClusterOptions>(options =>
             {
-                options.ClusterId = "users";
-                options.ServiceId = "orleans-app";
+                options.ClusterId = orleansOptions.ClusterId;
+                options.ServiceId = orleansOptions.ServiceId;
             });
             
             if (builder.Environment.IsDevelopment())
