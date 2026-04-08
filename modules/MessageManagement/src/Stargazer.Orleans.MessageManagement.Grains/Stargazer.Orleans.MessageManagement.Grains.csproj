@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Users\src\Stargazer.Orleans.Users.Grains.Abstractions\Stargazer.Orleans.Users.Grains.Abstractions.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.MessageManagement.Domain\Stargazer.Orleans.MessageManagement.Domain.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.MessageManagement.Grains.Abstractions\Stargazer.Orleans.MessageManagement.Grains.Abstractions.csproj" />

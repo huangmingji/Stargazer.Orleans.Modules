@@ -6,6 +6,7 @@ using Orleans.Runtime;
 using StackExchange.Redis;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
+using Stargazer.Orleans.MessageManagement.Grains.SeedData;
 using Stargazer.Orleans.MessageManagement.Grains.Senders.Email;
 using Stargazer.Orleans.MessageManagement.Grains.Senders.Push;
 using Stargazer.Orleans.MessageManagement.Grains.Senders.Sms;
@@ -63,12 +64,13 @@ public static class OrleansServerExtension
             // })
             .Configure<EndpointOptions>(options =>
             {
-                options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 11111);
-                options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 30000);
+                options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, orleansOptions.SiloPort);
+                options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Loopback, orleansOptions.GatewayPort);
                 options.AdvertisedIPAddress = IPAddress.Loopback;
-                options.SiloPort = 11111;
-                options.GatewayPort = 30000;
-            }).ConfigureLogging(logging => logging.AddConsole());
+                options.SiloPort = orleansOptions.SiloPort;
+                options.GatewayPort = orleansOptions.GatewayPort;
+            }).ConfigureLogging(logging => logging.AddConsole())
+            .AddStartupTask<MessageManagementSeedDataInitializer>();
         });
         return builder;
     }

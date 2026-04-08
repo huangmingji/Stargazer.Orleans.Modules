@@ -50,11 +50,11 @@ public static class OrleansServerExtension
             // })
             .Configure<EndpointOptions>(options =>
             {
-                options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 11111);
-                options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Loopback, 30000);
+                options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, orleansOptions.SiloPort);
+                options.GatewayListeningEndpoint = new IPEndPoint(IPAddress.Loopback, orleansOptions.GatewayPort);
                 options.AdvertisedIPAddress = IPAddress.Loopback;
-                options.SiloPort = 11111;
-                options.GatewayPort = 30000;
+                options.SiloPort = orleansOptions.SiloPort;
+                options.GatewayPort = orleansOptions.GatewayPort;
             }).ConfigureLogging(logging => logging.AddConsole());
         });
         
