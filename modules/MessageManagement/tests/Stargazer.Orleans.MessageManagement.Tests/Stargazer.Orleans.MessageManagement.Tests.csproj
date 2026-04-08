@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Stargazer.Orleans.MessageManagement.Domain\Stargazer.Orleans.MessageManagement.Domain.csproj" />
     <ProjectReference Include="..\..\src\Stargazer.Orleans.MessageManagement.Grains\Stargazer.Orleans.MessageManagement.Grains.csproj" />
+    <ProjectReference Include="..\..\src\Stargazer.Orleans.MessageManagement.Silo\Stargazer.Orleans.MessageManagement.Silo.csproj" />
   </ItemGroup>
 
 </Project>

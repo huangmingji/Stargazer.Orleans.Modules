@@ -78,6 +78,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.MessageMa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.MessageManagement.Domain.Shared", "modules\MessageManagement\src\Stargazer.Orleans.MessageManagement.Domain.Shared\Stargazer.Orleans.MessageManagement.Domain.Shared.csproj", "{23D2C197-B8AD-4E9F-84F3-6EFC33407EDA}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{BA8F323E-A206-829E-7127-19D7D25CEEE5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Stargazer.Orleans.MessageManagement.Tests", "modules\MessageManagement\tests\Stargazer.Orleans.MessageManagement.Tests\Stargazer.Orleans.MessageManagement.Tests.csproj", "{B8451614-81E5-4C98-BE14-5140AA049804}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -364,6 +368,18 @@ Global
 		{23D2C197-B8AD-4E9F-84F3-6EFC33407EDA}.Release|x64.Build.0 = Release|Any CPU
 		{23D2C197-B8AD-4E9F-84F3-6EFC33407EDA}.Release|x86.ActiveCfg = Release|Any CPU
 		{23D2C197-B8AD-4E9F-84F3-6EFC33407EDA}.Release|x86.Build.0 = Release|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Debug|x64.Build.0 = Debug|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Debug|x86.Build.0 = Debug|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Release|x64.ActiveCfg = Release|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Release|x64.Build.0 = Release|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Release|x86.ActiveCfg = Release|Any CPU
+		{B8451614-81E5-4C98-BE14-5140AA049804}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -400,5 +416,7 @@ Global
 		{6A9DE8C4-7EEE-4EF3-BFA7-C9CD6B9A5393} = {259308EA-B3E8-263C-DF4D-4C4360FE80F3}
 		{B0160B66-9065-4C99-B757-947FD128813E} = {259308EA-B3E8-263C-DF4D-4C4360FE80F3}
 		{23D2C197-B8AD-4E9F-84F3-6EFC33407EDA} = {259308EA-B3E8-263C-DF4D-4C4360FE80F3}
+		{BA8F323E-A206-829E-7127-19D7D25CEEE5} = {CEE3D027-0FC9-6868-4FD1-920FA1AE6C69}
+		{B8451614-81E5-4C98-BE14-5140AA049804} = {BA8F323E-A206-829E-7127-19D7D25CEEE5}
 	EndGlobalSection
 EndGlobal
