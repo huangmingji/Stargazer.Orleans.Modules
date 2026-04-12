@@ -74,6 +74,17 @@ public class MessageGrain : Grain, IMessageGrain
 
         await _recordRepository.InsertAsync(record);
 
+        if (!string.IsNullOrEmpty(input.TemplateCode))
+        {
+            var template = await _templateRepository.FindAsync(
+                x => x.Code == input.TemplateCode && x.Channel == channel);
+            if (template != null)
+            {
+                record.TemplateId = template.Id;
+                await _recordRepository.UpdateAsync(record);
+            }
+        }
+
         if (input.ScheduledAt.HasValue && input.ScheduledAt > DateTime.UtcNow)
         {
             _logger.LogInformation("Message {RecordId} scheduled for {ScheduledAt}, registering reminder",

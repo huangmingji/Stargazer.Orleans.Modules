@@ -5,6 +5,7 @@ using Orleans.Hosting;
 using Orleans.Runtime;
 using StackExchange.Redis;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
+using Stargazer.Orleans.MessageManagement.Grains;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
 using Stargazer.Orleans.MessageManagement.Grains.SeedData;
 using Stargazer.Orleans.MessageManagement.Grains.Senders.Email;
@@ -27,7 +28,9 @@ public static class OrleansServerExtension
             .Build();
         
         var orleansOptions = configuration.GetSection("Orleans").Get<OrleansOptions>() ?? new OrleansOptions();
+        var messageSettings = configuration.GetSection("Message").Get<MessageSettings>() ?? new MessageSettings();
 
+        builder.Services.AddSingleton(messageSettings);
         builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
         builder.Services.AddScoped<ISmsSender, SmsSenderFactory>();
         builder.Services.AddScoped<IPushSender, PushSenderFactory>();
