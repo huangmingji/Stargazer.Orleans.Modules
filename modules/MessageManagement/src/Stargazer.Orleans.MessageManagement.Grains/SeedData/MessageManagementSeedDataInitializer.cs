@@ -3,6 +3,7 @@ using Orleans.Runtime;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.Users.Grains.Abstractions.Roles;
 using Stargazer.Orleans.Users.Grains.Abstractions.Roles.Dtos;
+using Stargazer.Orleans.Users.Grains.Abstractions.Users;
 
 namespace Stargazer.Orleans.MessageManagement.Grains.SeedData;
 
@@ -16,9 +17,11 @@ public class MessageManagementSeedDataInitializer(
         
         var permissionGrain = clusterClient.GetGrain<IPermissionGrain>(0);
         var roleGrain = clusterClient.GetGrain<IRoleGrain>(0);
+        var userGrain = clusterClient.GetGrain<IUserGrain>(0);
         
         await SeedPermissionsAsync(permissionGrain, cancellationToken);
-        await CreateMessageAdminRoleAsync(permissionGrain, roleGrain, cancellationToken);
+        var messageAdminRoleId = await CreateMessageAdminRoleAsync(permissionGrain, roleGrain, cancellationToken);
+        await AssignMessageAdminRoleToAdminUserAsync(userGrain, roleGrain, messageAdminRoleId, cancellationToken);
         
         logger.LogInformation("MessageManagement模块种子数据初始化完成");
     }
@@ -59,7 +62,7 @@ public class MessageManagementSeedDataInitializer(
         }
     }
 
-    private async Task CreateMessageAdminRoleAsync(
+    private async Task<Guid> CreateMessageAdminRoleAsync(
         IPermissionGrain permissionGrain,
         IRoleGrain roleGrain,
         CancellationToken cancellationToken)
@@ -69,7 +72,7 @@ public class MessageManagementSeedDataInitializer(
         {
             logger.LogDebug("MessageAdmin角色已存在，跳过创建");
             await AssignPermissionsToRoleAsync(permissionGrain, roleGrain, existingRole.Id, cancellationToken);
-            return;
+            return existingRole.Id;
         }
 
         var newRole = await roleGrain.CreateRoleAsync(new CreateOrUpdateRoleInputDto
@@ -83,6 +86,40 @@ public class MessageManagementSeedDataInitializer(
 
         logger.LogInformation("创建MessageAdmin角色成功: {RoleId}", newRole.Id);
         await AssignPermissionsToRoleAsync(permissionGrain, roleGrain, newRole.Id, cancellationToken);
+        return newRole.Id;
+    }
+
+    private async Task AssignMessageAdminRoleToAdminUserAsync(
+        IUserGrain userGrain,
+        IRoleGrain roleGrain,
+        Guid roleId,
+        CancellationToken cancellationToken)
+    {
+        var adminUser = await userGrain.GetUserByAccountAsync("admin", cancellationToken);
+        if (adminUser is null)
+        {
+            logger.LogWarning("Admin账号不存在，无法分配MessageAdmin角色");
+            return;
+        }
+
+        var existingRoles = await userGrain.GetUserRolesAsync(adminUser.Id, cancellationToken);
+        if (existingRoles.Any(r => r.Id == roleId))
+        {
+            logger.LogDebug("Admin账号已拥有MessageAdmin角色，跳过分配");
+            return;
+        }
+        var roleIds = existingRoles.Select(r => r.Id).ToList();
+        roleIds.Add(roleId);
+
+        var assigned = await userGrain.AssignRolesAsync(adminUser.Id, roleIds, cancellationToken);
+        if (assigned)
+        {
+            logger.LogInformation("已为Admin账号分配MessageAdmin角色");
+        }
+        else
+        {
+            logger.LogWarning("为Admin账号分配MessageAdmin角色失败");
+        }
     }
 
     private async Task AssignPermissionsToRoleAsync(

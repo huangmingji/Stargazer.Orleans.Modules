@@ -30,26 +30,35 @@ public static class OrleansServerExtension
             {
                 options.ClusterId = orleansOptions.ClusterId;
                 options.ServiceId = orleansOptions.ServiceId;
-            }).UseRedisClustering(configuration.GetConnectionString("Redis"))
-            .AddRedisGrainStorageAsDefault(options =>
-            {
-                options.ConfigurationOptions =
-                    ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
             })
-            .AddRedisGrainStorage("OrleansStore", options =>
-            {
-                options.ConfigurationOptions =
-                    ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
-            })
-            // .AddAdoNetGrainStorageAsDefault(options =>
+            // .UseRedisClustering(configuration.GetConnectionString("Redis"))
+            // .UseRedisReminderService(options =>
             // {
-            //     options.Invariant = "Npgsql";
-            //     options.ConnectionString = configuration.GetConnectionString("Users");
-            // }).AddAdoNetGrainStorage("OrleansStore", options =>
+            //     options.ConfigurationOptions = ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+            // }).AddRedisGrainStorageAsDefault(options =>
             // {
-            //     options.Invariant = "Npgsql";
-            //     options.ConnectionString = configuration.GetConnectionString("Users");
+            //     options.ConfigurationOptions =
+            //         ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
             // })
+            // .AddRedisGrainStorage("OrleansStore", options =>
+            // {
+            //     options.ConfigurationOptions =
+            //         ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+            // })
+            .UseAdoNetClustering(options =>
+            {
+                options.Invariant = "Npgsql";
+                options.ConnectionString = configuration.GetConnectionString("Users");
+            })
+            .AddAdoNetGrainStorageAsDefault(options =>
+            {
+                options.Invariant = "Npgsql";
+                options.ConnectionString = configuration.GetConnectionString("Users");
+            }).AddAdoNetGrainStorage("OrleansStore", options =>
+            {
+                options.Invariant = "Npgsql";
+                options.ConnectionString = configuration.GetConnectionString("Users");
+            })
             .Configure<EndpointOptions>(options =>
             {
                 options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, orleansOptions.SiloPort);
