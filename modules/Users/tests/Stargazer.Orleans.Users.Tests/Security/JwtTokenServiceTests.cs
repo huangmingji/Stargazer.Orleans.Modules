@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using Stargazer.Orleans.Users.Grains.Abstractions.Security;
 using Stargazer.Orleans.Users.Silo.Security;
 using Xunit;
 

@@ -1,4 +1,4 @@
-namespace Stargazer.Orleans.Users.Silo.Security;
+namespace Stargazer.Orleans.Users.Grains.Abstractions.Security;
 
 public class JwtSettings
 {

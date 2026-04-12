@@ -3,7 +3,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
-using Stargazer.Orleans.Users.Silo.Security;
+using Stargazer.Orleans.Users.Grains.Abstractions.Security;
 
 namespace Stargazer.Orleans.Users.Silo.Security;
 
@@ -17,11 +17,11 @@ public interface IJwtTokenService
 
 public class JwtTokenService : IJwtTokenService
 {
-    private readonly JwtSettings _settings;
+    private readonly Grains.Abstractions.Security.JwtSettings _settings;
     private readonly SymmetricSecurityKey _securityKey;
     private readonly TokenValidationParameters _tokenValidationParameters;
 
-    public JwtTokenService(JwtSettings settings)
+    public JwtTokenService(Grains.Abstractions.Security.JwtSettings settings)
     {
         _settings = settings;
         _securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.SecretKey));

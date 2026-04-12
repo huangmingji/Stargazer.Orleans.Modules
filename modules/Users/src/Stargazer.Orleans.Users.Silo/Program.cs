@@ -12,6 +12,7 @@ using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.Users.Silo;
 using Stargazer.Orleans.Users.Silo.Authorization;
 using Stargazer.Orleans.Users.Silo.Middleware;
+using Stargazer.Orleans.Users.Grains.Abstractions.Security;
 using Stargazer.Orleans.Users.Silo.Security;
 using System.Text;
 
