@@ -96,6 +96,11 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> DeleteAsync(Guid id)
     {
+        if (await Grain.GetAsync(id) == null)
+        {
+            return NotFound();
+        }
+
         try
         {
             await Grain.DeleteAsync(id);
