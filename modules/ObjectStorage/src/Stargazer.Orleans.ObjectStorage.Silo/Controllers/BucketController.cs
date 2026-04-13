@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions;
+using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Dtos;
 using ResponseData = Stargazer.Orleans.ObjectStorage.Grains.Abstractions.ResponseData;
 
@@ -38,7 +39,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>存储桶信息</returns>
     [HttpGet("{id:guid}")]
-    [Authorize(policy: "permission:storage.bucket.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Buckets.View}")]
     public async Task<IActionResult> GetBucket(Guid id, CancellationToken cancellationToken = default)
     {
         var bucketGrain = client.GetGrain<IBucketGrain>(0);
@@ -59,7 +60,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>存储桶信息</returns>
     [HttpGet("name/{name}")]
-    [Authorize(policy: "permission:storage.bucket.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Buckets.View}")]
     public async Task<IActionResult> GetBucketByName(string name, CancellationToken cancellationToken = default)
     {
         var bucketGrain = client.GetGrain<IBucketGrain>(0);
@@ -79,7 +80,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>存储桶列表</returns>
     [HttpGet]
-    [Authorize(policy: "permission:storage.bucket.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Buckets.View}")]
     public async Task<IActionResult> GetUserBuckets(CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
@@ -95,7 +96,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>创建的存储桶信息</returns>
     [HttpPost]
-    [Authorize(policy: "permission:storage.bucket.create")]
+    [Authorize(policy: $"permission:{StoragePolicies.Buckets.Create}")]
     public async Task<IActionResult> CreateBucket([FromBody] BucketDto bucket, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
@@ -121,13 +122,13 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>更新后的存储桶信息</returns>
     [HttpPut("{id:guid}")]
-    [Authorize(policy: "permission:storage.bucket.update")]
+    [Authorize(policy: $"permission:{StoragePolicies.Buckets.Update}")]
     public async Task<IActionResult> UpdateBucket(Guid id, [FromBody] BucketDto bucket, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
         var bucketGrain = client.GetGrain<IBucketGrain>(0);
         
-        var hasAccess = await bucketGrain.HasAccessPermissionAsync(id, userId, "Write", cancellationToken);
+        var hasAccess = await bucketGrain.HasAccessPermissionAsync(id, userId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
         {
             return Forbid();
@@ -152,7 +153,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>删除结果</returns>
     [HttpDelete("{id:guid}")]
-    [Authorize(policy: "permission:storage.bucket.delete")]
+    [Authorize(policy: $"permission:{StoragePolicies.Buckets.Delete}")]
     public async Task<IActionResult> DeleteBucket(Guid id, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
@@ -187,7 +188,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>是否有权限</returns>
     [HttpGet("{id:guid}/access")]
-    [Authorize(policy: "permission:storage.bucket.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Buckets.View}")]
     public async Task<IActionResult> CheckAccess(Guid id, [FromQuery] string action, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();

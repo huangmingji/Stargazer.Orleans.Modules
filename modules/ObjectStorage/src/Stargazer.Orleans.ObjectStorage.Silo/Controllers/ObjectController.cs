@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions;
+using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Dtos;
 using ResponseData = Stargazer.Orleans.ObjectStorage.Grains.Abstractions.ResponseData;
 
@@ -52,10 +53,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>文件流</returns>
     [HttpGet("{bucketId:guid}/{*key}")]
-    [Authorize(policy: "permission:storage.object.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
     public async Task<IActionResult> DownloadObject(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Read");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
         if (!hasAccess)
         {
             return Forbid();
@@ -83,10 +84,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>204 表示存在，404 表示不存在</returns>
     [HttpHead("{bucketId:guid}/{*key}")]
-    [Authorize(policy: "permission:storage.object.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
     public async Task<IActionResult> CheckObjectExists(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Read");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
         if (!hasAccess)
         {
             return Forbid();
@@ -111,10 +112,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>对象元数据</returns>
     [HttpGet("metadata/{bucketId:guid}/{*key}")]
-    [Authorize(policy: "permission:storage.object.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
     public async Task<IActionResult> GetObjectMetadata(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Read");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
         if (!hasAccess)
         {
             return Forbid();
@@ -141,10 +142,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>分页对象列表</returns>
     [HttpGet("{bucketId:guid}")]
-    [Authorize(policy: "permission:storage.object.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
     public async Task<IActionResult> ListObjects(Guid bucketId, [FromQuery] string? prefix, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Read");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
         if (!hasAccess)
         {
             return Forbid();
@@ -165,10 +166,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>上传结果</returns>
     [HttpPost("{bucketId:guid}/{*key}")]
-    [Authorize(policy: "permission:storage.object.create")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.Create}")]
     public async Task<IActionResult> UploadObject(Guid bucketId, string key, [FromForm] IFormFile file, [FromForm] string? contentType, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Write");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
         if (!hasAccess)
         {
             return Forbid();
@@ -214,10 +215,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>上传结果</returns>
     [HttpPut("{bucketId:guid}/{*key}")]
-    [Authorize(policy: "permission:storage.object.update")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.Update}")]
     public async Task<IActionResult> UpdateObject(Guid bucketId, string key, [FromForm] IFormFile file, [FromForm] string? contentType, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Write");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
         if (!hasAccess)
         {
             return Forbid();
@@ -261,10 +262,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>删除结果</returns>
     [HttpDelete("{bucketId:guid}/{*key}")]
-    [Authorize(policy: "permission:storage.object.delete")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.Delete}")]
     public async Task<IActionResult> DeleteObject(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Write");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
         if (!hasAccess)
         {
             return Forbid();
@@ -292,10 +293,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>签名 URL</returns>
     [HttpGet("signed-url/{bucketId:guid}/{*key}")]
-    [Authorize(policy: "permission:storage.object.view")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
     public async Task<IActionResult> GetSignedUrl(Guid bucketId, string key, [FromQuery] TimeSpan expiry, [FromQuery] string method = "GET", CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Read");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
         if (!hasAccess)
         {
             return Forbid();
@@ -321,10 +322,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>分片上传信息</returns>
     [HttpPost("multipart/initiate/{bucketId:guid}/{*key}")]
-    [Authorize(policy: "permission:storage.object.create")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.Create}")]
     public async Task<IActionResult> InitiateMultipartUpload(Guid bucketId, string key, [FromBody] InitiateMultipartUploadRequest request, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Write");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
         if (!hasAccess)
         {
             return Forbid();
@@ -353,10 +354,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>分片上传结果</returns>
     [HttpPost("multipart/part/{bucketId:guid}/{uploadId}/{*key}")]
-    [Authorize(policy: "permission:storage.object.create")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.Create}")]
     public async Task<IActionResult> UploadPart(Guid bucketId, string key, string uploadId, [FromForm] IFormFile file, [FromForm] int partNumber, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Write");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
         if (!hasAccess)
         {
             return Forbid();
@@ -395,10 +396,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>上传结果</returns>
     [HttpPost("multipart/complete/{bucketId:guid}/{uploadId}/{*key}")]
-    [Authorize(policy: "permission:storage.object.create")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.Create}")]
     public async Task<IActionResult> CompleteMultipartUpload(Guid bucketId, string key, string uploadId, [FromBody] CompleteMultipartUploadRequest request, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Write");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
         if (!hasAccess)
         {
             return Forbid();
@@ -430,10 +431,10 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <param name="cancellationToken">取消令牌</param>
     /// <returns>取消结果</returns>
     [HttpDelete("multipart/{bucketId:guid}/{uploadId}/{*key}")]
-    [Authorize(policy: "permission:storage.object.delete")]
+    [Authorize(policy: $"permission:{StoragePolicies.Objects.Delete}")]
     public async Task<IActionResult> AbortMultipartUpload(Guid bucketId, string key, string uploadId, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, "Write");
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
         if (!hasAccess)
         {
             return Forbid();

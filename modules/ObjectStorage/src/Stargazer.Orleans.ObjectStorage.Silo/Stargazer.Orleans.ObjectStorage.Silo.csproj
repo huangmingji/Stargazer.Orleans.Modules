@@ -36,6 +36,7 @@
     <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.Grains\Stargazer.Orleans.ObjectStorage.Grains.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\..\Users\src\Stargazer.Orleans.Users.Grains.Abstractions\Stargazer.Orleans.Users.Grains.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>

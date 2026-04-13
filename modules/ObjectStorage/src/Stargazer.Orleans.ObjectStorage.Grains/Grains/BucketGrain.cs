@@ -3,6 +3,7 @@ using Orleans.Concurrency;
 using Stargazer.Orleans.ObjectStorage.Domain.Entities;
 using Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions;
+using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Dtos;
 
 namespace Stargazer.Orleans.ObjectStorage.Grains.Grains;
@@ -106,7 +107,7 @@ public class BucketGrain(
 
         if (bucket.Acl == BucketAclType.PublicRead || bucket.Acl == BucketAclType.PublicReadWrite)
         {
-            return action == "Read" || bucket.Acl == BucketAclType.PublicReadWrite;
+            return action == StorageActions.Read || bucket.Acl == BucketAclType.PublicReadWrite;
         }
 
         var policies = await policyRepository.FindListAsync(
