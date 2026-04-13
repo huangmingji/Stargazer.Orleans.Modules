@@ -116,6 +116,16 @@ public class IntegrationTestBase : IClassFixture<TestWebApplicationFactory>, IAs
     private async Task<(bool Success, T? Data, string? ErrorCode)> ParseResponseAsync<T>(HttpResponseMessage response)
     {
         var content = await response.Content.ReadAsStringAsync();
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return (false, default, "unauthorized");
+        }
+
+        if (response.StatusCode == HttpStatusCode.Forbidden)
+        {
+            return (false, default, "forbidden");
+        }
         
         if (string.IsNullOrWhiteSpace(content))
         {
