@@ -2,6 +2,7 @@ using System.Net;
 using Microsoft.AspNetCore.Authorization;
 using Orleans.Configuration;
 using StackExchange.Redis;
+using Stargazer.Orleans.ObjectStorage.Grains.SeedData;
 using Stargazer.Orleans.ObjectStorage.Silo.Authorization;
 using Stargazer.Orleans.ObjectStorage.Silo.Configuration;
 using Stargazer.Orleans.ObjectStorage.Silo.Storage;
@@ -67,7 +68,8 @@ public static class OrleansServerExtension
                 options.AdvertisedIPAddress = IPAddress.Loopback;
                 options.SiloPort = orleansOptions.SiloPort;
                 options.GatewayPort = orleansOptions.GatewayPort;
-            }).ConfigureLogging(logging => logging.AddConsole());
+            }).ConfigureLogging(logging => logging.AddConsole())
+            .AddStartupTask<StorageSeedDataInitializer>();
         });
         
         // 注册 Storage Provider

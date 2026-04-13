@@ -4,6 +4,7 @@
     <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.Domain\Stargazer.Orleans.ObjectStorage.Domain.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.Grains.Abstractions\Stargazer.Orleans.ObjectStorage.Grains.Abstractions.csproj" />
     <ProjectReference Include="..\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.csproj" />
+    <ProjectReference Include="..\..\..\Users\src\Stargazer.Orleans.Users.Grains.Abstractions\Stargazer.Orleans.Users.Grains.Abstractions.csproj" />
   </ItemGroup>
 
   <ItemGroup>
