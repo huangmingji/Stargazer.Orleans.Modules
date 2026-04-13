@@ -203,12 +203,23 @@ public class LocalStorageProvider : IStorageProvider
 
     private string GetFilePath(string bucket, string key)
     {
+        ValidatePath(bucket, key);
         return Path.Combine(_basePath, bucket, key);
     }
 
     private string GetPartPath(string bucket, string key, string uploadId, int partNumber)
     {
+        ValidatePath(bucket, key);
         return Path.Combine(_basePath, bucket, $"{key}.part{uploadId}.{partNumber}");
+    }
+
+    private static void ValidatePath(string bucket, string key)
+    {
+        var fullPath = Path.GetFullPath(Path.Combine(bucket, key));
+        if (fullPath.Contains(".."))
+        {
+            throw new InvalidOperationException("Invalid path: path traversal detected");
+        }
     }
 
     private void CleanupParts(string bucket, string key, string uploadId)

@@ -219,12 +219,18 @@ public class ObjectGrain(
     {
         Expression<Func<ObjectInfoEntity, bool>> predicate = x => x.BucketId == bucketId && !x.IsDeleted;
         
-        var objects = await objectRepository.FindListAsync(predicate, cancellationToken);
-
         if (!string.IsNullOrEmpty(prefix))
         {
-            objects = objects.Where(x => x.Key.StartsWith(prefix)).ToList();
+            predicate = x => x.BucketId == bucketId && !x.IsDeleted && x.Key.StartsWith(prefix);
         }
+
+        var (objects, _) = await objectRepository.FindListAsync(
+            predicate, 
+            1, 
+            int.MaxValue, 
+            x => x.LastModified, 
+            true, 
+            cancellationToken);
 
         return objects.Select(x => new ObjectMetadataDto
         {
@@ -248,24 +254,23 @@ public class ObjectGrain(
 
         Expression<Func<ObjectInfoEntity, bool>> predicate = x => x.BucketId == bucketId && !x.IsDeleted;
         
-        var allObjects = await objectRepository.FindListAsync(predicate, cancellationToken);
-
         if (!string.IsNullOrEmpty(prefix))
         {
-            allObjects = allObjects.Where(x => x.Key.StartsWith(prefix)).ToList();
+            predicate = x => x.BucketId == bucketId && !x.IsDeleted && x.Key.StartsWith(prefix);
         }
 
-        var total = allObjects.Count;
-        var pagedObjects = allObjects
-            .OrderByDescending(x => x.LastModified)
-            .Skip((pageIndex - 1) * pageSize)
-            .Take(pageSize)
-            .ToList();
+        var (objects, total) = await objectRepository.FindListAsync(
+            predicate, 
+            pageIndex, 
+            pageSize, 
+            x => x.LastModified, 
+            true, 
+            cancellationToken);
 
         return new PageResult<ObjectMetadataDto>
         {
             Total = total,
-            Items = pagedObjects.Select(x => new ObjectMetadataDto
+            Items = objects.Select(x => new ObjectMetadataDto
             {
                 Id = x.Id,
                 Key = x.Key,
@@ -363,6 +368,11 @@ public class ObjectGrain(
             throw new InvalidOperationException("Invalid or expired multipart upload");
         }
 
+        if (multipart.BucketId != bucketId || multipart.Key != key)
+        {
+            throw new InvalidOperationException("Multipart upload does not match the specified bucket or key");
+        }
+
         var etag = await storageProvider.UploadPartAsync(bucket.Name, key, uploadId, partNumber, content, cancellationToken);
 
         multipart.Parts.Add(new UploadPart
@@ -399,6 +409,11 @@ public class ObjectGrain(
             throw new InvalidOperationException("Invalid or expired multipart upload");
         }
 
+        if (multipart.BucketId != bucketId || multipart.Key != key)
+        {
+            throw new InvalidOperationException("Multipart upload does not match the specified bucket or key");
+        }
+
         var partEtags = parts.Select(p => new PartETag
         {
             PartNumber = p.PartNumber,
@@ -417,6 +432,8 @@ public class ObjectGrain(
         var now = DateTime.UtcNow;
 
         var existingObject = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key, cancellationToken);
+        var originalSize = existingObject?.Size ?? 0;
+        
         if (existingObject != null)
         {
             existingObject.Size = totalSize;
@@ -445,7 +462,7 @@ public class ObjectGrain(
         await multipartRepository.UpdateAsync(multipart, cancellationToken);
 
         bucket.CurrentObjectCount = await objectRepository.CountAsync(x => x.BucketId == bucketId && !x.IsDeleted, cancellationToken);
-        bucket.CurrentStorageSize += totalSize;
+        bucket.CurrentStorageSize = bucket.CurrentStorageSize - originalSize + totalSize;
         await bucketRepository.UpdateAsync(bucket, cancellationToken);
 
         logger.LogInformation("Completed multipart upload for {Key}, uploadId: {UploadId}", key, uploadId);
@@ -475,6 +492,11 @@ public class ObjectGrain(
         if (multipart == null)
         {
             return;
+        }
+
+        if (multipart.BucketId != bucketId || multipart.Key != key)
+        {
+            throw new InvalidOperationException("Multipart upload does not match the specified bucket or key");
         }
 
         await storageProvider.AbortMultipartUploadAsync(bucket.Name, key, uploadId, cancellationToken);

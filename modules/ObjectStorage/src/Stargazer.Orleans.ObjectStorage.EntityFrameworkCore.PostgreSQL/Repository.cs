@@ -135,7 +135,7 @@ namespace Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL
 
         public async Task<bool> AnyAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default)
         {
-            return await Where(expression).AnyAsync(expression, cancellationToken);
+            return await Where(expression).AnyAsync(cancellationToken);
         }
 
         public async Task<int> CountAsync(Expression<Func<TEntity, bool>> expression, CancellationToken cancellationToken = default)
