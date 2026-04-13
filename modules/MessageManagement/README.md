@@ -365,6 +365,13 @@ appsettings.json
     "Message": "server=127.0.0.1;port=5432;Database=orleans;uid=postgres;pwd=123456",
     "Redis": "127.0.0.1:6379"
   },
+  "JwtSettings": {
+    "SecretKey": "StargazerSecretKey2026VeryLongAndSecureKeyForJwtTokenGeneration",
+    "Issuer": "Stargazer.Orleans",
+    "Audience": "Stargazer.Orleans",
+    "ExpiryMinutes": 60,
+    "RefreshTokenExpiryDays": 7
+  },
   "Message": {
     "Email": {
       "DefaultProvider": "smtp",
@@ -652,6 +659,79 @@ public class NewSmsSender : ISmsSender
 - 需要配置：AccessKeyId、AccessKeySecret、Signature（签名名称）
 - RequestUrl 默认：`https://sms-global.ctapi.ctyun.cn/sms/api/v1`
 
+## 认证与授权
+
+### JWT 配置
+
+模块使用统一的 `JwtSettings` 配置，与 Users 模块共享：
+
+```json
+"JwtSettings": {
+  "SecretKey": "StargazerSecretKey2026VeryLongAndSecureKeyForJwtTokenGeneration",
+  "Issuer": "Stargazer.Orleans",
+  "Audience": "Stargazer.Orleans",
+  "ExpiryMinutes": 60,
+  "RefreshTokenExpiryDays": 7
+}
+```
+
+> **注意**：`JwtSettings` 类定义在 `Stargazer.Orleans.Users.Grains.Abstractions.Security.JwtSettings`，各模块共享使用。
+
+### API 认证
+
+所有 API 接口需要 JWT Token 认证：
+
+```http
+Authorization: Bearer <access_token>
+```
+
+### 权限说明
+
+| 权限代码 | 说明 |
+|----------|------|
+| `message:send` | 发送消息 |
+| `message:view` | 查看消息 |
+| `message:retry` | 重试消息 |
+| `message:cancel` | 取消消息 |
+| `template:view` | 查看模板 |
+| `template:create` | 创建模板 |
+| `template:update` | 更新模板 |
+| `template:delete` | 删除模板 |
+
+## 启动与初始化
+
+### 启动顺序
+
+1. **PostgreSQL** - 数据库
+2. **Redis** - Orleans 集群状态存储（可选）
+3. **Users.Silo** - 用户认证服务（端口 5000）
+4. **MessageManagement.Silo** - 消息管理服务
+
+### 种子数据
+
+启动时自动初始化以下数据：
+
+#### 权限
+
+| 权限名称 | 权限代码 | 分类 |
+|----------|----------|------|
+| 发送消息 | `message:send` | 消息管理 |
+| 查看消息 | `message:view` | 消息管理 |
+| 重试消息 | `message:retry` | 消息管理 |
+| 取消消息 | `message:cancel` | 消息管理 |
+| 查看模板 | `template:view` | 消息模板 |
+| 创建模板 | `template:create` | 消息模板 |
+| 编辑模板 | `template:update` | 消息模板 |
+| 删除模板 | `template:delete` | 消息模板 |
+
+#### 角色
+
+| 角色名称 | 说明 |
+|----------|------|
+| MessageAdmin | 消息管理员，拥有所有消息管理权限 |
+
+> **注意**：`MessageAdmin` 角色会自动分配给 `Admin` 账号（如果该账号存在）。
+
 ### 手机号格式
 
 所有 SMS Provider 使用统一的 `PhoneNumberHelper` 处理手机号格式：
@@ -721,6 +801,56 @@ public class NewSmsSender : ISmsSender
 您好 张三，您的验证码是 123456，5分钟内有效。
 ```
 
+## 测试
+
+### 集成测试
+
+项目包含完整的集成测试，位于 `tests/Stargazer.Orleans.MessageManagement.Tests/Integration/` 目录：
+
+| 测试类 | 说明 |
+|--------|------|
+| `MessageControllerIntegrationTests` | MessageController 集成测试 (14 个测试) |
+| `TemplateControllerIntegrationTests` | TemplateController 集成测试 (15 个测试) |
+
+### 运行集成测试
+
+集成测试需要以下服务运行：
+
+1. **PostgreSQL** - 数据库
+2. **Users.Silo** - 运行在 `http://localhost:5079`
+3. **MessageManagement.Silo** - 测试会自动启动
+
+```bash
+# 运行所有测试
+dotnet test
+
+# 运行集成测试
+dotnet test --filter "Category=Integration"
+
+# 运行单元测试（不需要外部服务）
+dotnet test --filter "FullyQualifiedName~.Grains."
+```
+
+### 测试认证
+
+集成测试使用 `Admin` 账号自动登录获取 JWT Token：
+
+```csharp
+// IntegrationTestBase.cs
+protected async Task LoginAsAdminAsync()
+{
+    // 调用 Users.Silo 获取 token
+    var loginInput = new VerifyPasswordInputDto
+    {
+        Name = "Admin",
+        Password = "Admin@123456"
+    };
+    // ...
+}
+```
+
+> **注意**：确保 `Admin` 账号存在且密码为 `Admin@123456`。
+
 ## 注意事项
 
 ### 已实现功能
@@ -737,9 +867,10 @@ public class NewSmsSender : ISmsSender
 
 1. ~~**Push Provider**：极光推送和友盟推送均已实现~~ ✅
 2. ~~**定时消息消费**：使用 Redis Reminder 实现后台调度~~ ✅
-3. **自动重试**：目前仅支持手动重试，可扩展自动重试机制
-4. **Provider 健康检查**：暂无自动故障转移
-5. **限流控制**：暂无内置限流
+3. ~~**集成测试**：MessageController 和 TemplateController 集成测试~~ ✅
+4. **自动重试**：目前仅支持手动重试，可扩展自动重试机制
+5. **Provider 健康检查**：暂无自动故障转移
+6. **限流控制**：暂无内置限流
 
 ### 技术选型说明
 
