@@ -1,4 +1,4 @@
-using Stargazer.Orleans.ObjectStorage.Domain.Entities;
+using Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage;
 using Xunit;
 
 namespace Stargazer.Orleans.ObjectStorage.Tests.Domain;

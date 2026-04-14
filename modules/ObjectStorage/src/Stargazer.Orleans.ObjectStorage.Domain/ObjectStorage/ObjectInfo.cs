@@ -1,6 +1,4 @@
-using Stargazer.Orleans.ObjectStorage.Domain;
-
-namespace Stargazer.Orleans.ObjectStorage.Domain.Entities;
+namespace Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage;
 
 public class ObjectInfo : Entity<Guid>
 {

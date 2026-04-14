@@ -20,10 +20,33 @@ Stargazer.Orleans.MessageManagement/
 ├── src/
 │   ├── Stargazer.Orleans.MessageManagement.Domain/          # 领域实体
 │   ├── Stargazer.Orleans.MessageManagement.Grains/         # Grain 实现 + Senders
+│   │   ├── Grains/
+│   │   │   ├── MessageGrain.cs
+│   │   │   ├── TemplateGrain.cs
+│   │   │   └── ScheduledMessageReminderGrain.cs
+│   │   ├── Senders/
+│   │   │   ├── Email/ (SmtpEmailSender)
+│   │   │   ├── Sms/ (Aliyun/Tencent/Huawei/Ctyun Senders)
+│   │   │   └── Push/ (JPush/Umeng Senders)
+│   │   └── SeedData/
+│   │       └── MessageManagementSeedDataInitializer.cs  # 种子数据初始化
 │   ├── Stargazer.Orleans.MessageManagement.Grains.Abstractions/  # 接口和 DTO
 │   ├── Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL/  # EF Core 持久化
 │   └── Stargazer.Orleans.MessageManagement.Silo/            # API 控制器和配置
+│       ├── Controllers/
+│       │   ├── MessageController.cs
+│       │   └── TemplateController.cs
+│       ├── Authorization/
+│       │   └── PermissionHandler.cs
+│       └── Program.cs
 └── tests/
+    └── Stargazer.Orleans.MessageManagement.Tests/
+        ├── Integration/
+        │   ├── TestWebApplicationFactory.cs
+        │   ├── IntegrationTestBase.cs
+        │   ├── MessageControllerIntegrationTests.cs
+        │   └── TemplateControllerIntegrationTests.cs
+        └── ...
 ```
 
 ## 架构设计
@@ -707,6 +730,19 @@ Authorization: Bearer <access_token>
 3. **Users.Silo** - 用户认证服务（端口 5000）
 4. **MessageManagement.Silo** - 消息管理服务
 
+### Silo 注册
+
+MessageManagement 模块需要在 `OrleansServerExtension` 中注册种子数据初始化器：
+
+```csharp
+siloBuilder.AddStartupTask<MessageManagementSeedDataInitializer>();
+```
+
+### 初始化顺序
+
+1. **Users.Silo** 先启动，确保 `Admin` 用户存在
+2. **MessageManagement.Silo** 启动，自动创建 `MessageAdmin` 角色并分配给 `Admin` 用户
+
 ### 种子数据
 
 启动时自动初始化以下数据：
@@ -803,33 +839,45 @@ Authorization: Bearer <access_token>
 
 ## 测试
 
+### 单元测试
+
+MessageManagement 模块包含单元测试，位于 `tests/Stargazer.Orleans.MessageManagement.Tests/` 目录：
+
+| 测试类 | 说明 |
+|--------|------|
+| `MessageSenderTests` | 消息发送器测试 |
+| `MessageGrainTests` | MessageGrain 单元测试 |
+| `TemplateGrainTests` | TemplateGrain 单元测试 |
+| `SmsSenderTests` | SMS 发送器测试（含 PhoneNumberHelper） |
+
+运行单元测试：
+
+```bash
+dotnet test modules/MessageManagement/tests/Stargazer.Orleans.MessageManagement.Tests --filter "Category!=Integration"
+```
+
 ### 集成测试
 
 项目包含完整的集成测试，位于 `tests/Stargazer.Orleans.MessageManagement.Tests/Integration/` 目录：
 
 | 测试类 | 说明 |
 |--------|------|
-| `MessageControllerIntegrationTests` | MessageController 集成测试 (14 个测试) |
-| `TemplateControllerIntegrationTests` | TemplateController 集成测试 (15 个测试) |
+| `MessageControllerIntegrationTests` | MessageController 集成测试 |
+| `TemplateControllerIntegrationTests` | TemplateController 集成测试 |
 
-### 运行集成测试
-
-集成测试需要以下服务运行：
-
-1. **PostgreSQL** - 数据库
-2. **Users.Silo** - 运行在 `http://localhost:5079`
-3. **MessageManagement.Silo** - 测试会自动启动
+运行集成测试：
 
 ```bash
-# 运行所有测试
-dotnet test
-
-# 运行集成测试
-dotnet test --filter "Category=Integration"
-
-# 运行单元测试（不需要外部服务）
-dotnet test --filter "FullyQualifiedName~.Grains."
+RUN_INTEGRATION_TESTS=true dotnet test modules/MessageManagement/tests/Stargazer.Orleans.MessageManagement.Tests --filter "Category=Integration"
 ```
+
+### 运行所有测试
+
+```bash
+dotnet test modules/MessageManagement/tests/Stargazer.Orleans.MessageManagement.Tests
+```
+
+> **测试总数**: 124 个测试
 
 ### 测试认证
 
@@ -842,7 +890,7 @@ protected async Task LoginAsAdminAsync()
     // 调用 Users.Silo 获取 token
     var loginInput = new VerifyPasswordInputDto
     {
-        Name = "Admin",
+        Name = "admin",
         Password = "Admin@123456"
     };
     // ...

@@ -1,6 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Orleans.Runtime;
 using Stargazer.Common;
 using Stargazer.Common.SequentialGuid;
 using Stargazer.Orleans.Users.Domain.Permissions;
@@ -8,10 +7,9 @@ using Stargazer.Orleans.Users.Domain.Roles;
 using Stargazer.Orleans.Users.Domain.UserRoles;
 using Stargazer.Orleans.Users.Domain.Users;
 using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL;
-using Stargazer.Orleans.Users.Grains.Abstractions;
 using Stargazer.Orleans.Users.Grains.Abstractions.Authorization;
 
-namespace Stargazer.Orleans.Users.Grains.Grains;
+namespace Stargazer.Orleans.Users.Grains.SeedData;
 
 public class UsersSeedDataInitializer(
     IServiceScopeFactory serviceScopeFactory,

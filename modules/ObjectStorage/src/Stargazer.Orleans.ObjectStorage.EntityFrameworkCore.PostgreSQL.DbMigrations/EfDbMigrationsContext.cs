@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Stargazer.Orleans.ObjectStorage.Domain.Entities;
+using Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage;
 
 namespace Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations
 {

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using Stargazer.Orleans.ObjectStorage.Domain.Entities;
+using Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage;
 using Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations;
 
 #nullable disable

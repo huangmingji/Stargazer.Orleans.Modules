@@ -6,6 +6,7 @@ using Orleans.Configuration;
 using Orleans.Runtime;
 using StackExchange.Redis;
 using Stargazer.Orleans.Users.Grains.Grains;
+using Stargazer.Orleans.Users.Grains.SeedData;
 
 namespace Stargazer.Orleans.Users.Silo;
 

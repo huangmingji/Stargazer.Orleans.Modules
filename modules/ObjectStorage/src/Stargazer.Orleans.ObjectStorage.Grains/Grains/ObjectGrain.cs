@@ -2,14 +2,14 @@ using System.Linq.Expressions;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
-using Stargazer.Orleans.ObjectStorage.Domain.Entities;
+using Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage;
 using Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Dtos;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Storage;
-using BucketEntity = Stargazer.Orleans.ObjectStorage.Domain.Entities.Bucket;
-using MultipartUploadEntity = Stargazer.Orleans.ObjectStorage.Domain.Entities.MultipartUpload;
-using ObjectInfoEntity = Stargazer.Orleans.ObjectStorage.Domain.Entities.ObjectInfo;
+using BucketEntity = Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage.Bucket;
+using MultipartUploadEntity = Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage.MultipartUpload;
+using ObjectInfoEntity = Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage.ObjectInfo;
 
 namespace Stargazer.Orleans.ObjectStorage.Grains.Grains;
 

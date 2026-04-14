@@ -13,13 +13,19 @@
 ### 对象存储
 - 对象上传、下载、删除
 - 对象元数据管理
-- 对象列表查询 (支持前缀过滤)
+- 对象列表查询 (支持前缀过滤和分页)
 - 对象存在性检查
 
 ### 高级功能
 - **签名 URL**: 生成临时访问链接，支持自定义过期时间 (最长 7 天)
 - **分片上传**: 大文件分片上传，支持断点续传
 - **权限继承**: 基于存储桶 ACL 和用户角色自动授权
+
+### 权限系统
+- 基于 Users 模块的权限体系
+- 8 个存储桶/对象操作权限
+- ObjectStorageAdmin 预定义角色
+- Silo 启动时自动初始化种子数据
 
 ## 架构设计
 
@@ -35,31 +41,21 @@
             ▼                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      Grain Layer                            │
-│  ┌──────────────────┐    ┌─────────────────────────────┐    │
-│  │   BucketGrain    │    │      ObjectGrain            │    │
-│  │  - CRUD Bucket   │    │  - Upload/Download          │    │
-│  │  - ACL Check     │    │  - Multipart Upload         │    │
-│  │  - Policy Eval   │    │  - Signed URL               │    │
-│  └────────┬─────────┘    └─────────────┬───────────────┘    │
-└───────────┼─────────────────────────────┼───────────────────┘
+│  ┌──────────────────┐    ┌─────────────────────────────┐  │
+│  │   BucketGrain    │    │      ObjectGrain            │  │
+│  │  - CRUD Bucket   │    │  - Upload/Download          │  │
+│  │  - ACL Check     │    │  - Multipart Upload         │  │
+│  │  - Policy Eval   │    │  - Signed URL               │  │
+│  └────────┬─────────┘    └─────────────┬───────────────┘  │
+└───────────┼─────────────────────────────┼──────────────────┘
             │                             │
             ▼                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                   Repository Layer                          │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              IRepository<TKey>                       │   │
-│  │  - Bucket / BucketPolicy                             │   │
-│  │  - ObjectInfo / MultipartUpload                      │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Storage Provider Layer                     │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐        │
-│  │  Local   │ │ Aliyun   │ │   AWS    │ │  Azure   │ ...    │
-│  │   OSS    │ │   S3     │ │  Blob    │ │   COS    │        │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘        │
+│                    Storage Provider Layer                    │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐       │
+│  │  Local   │ │ Aliyun   │ │   AWS    │ │  Azure   │       │
+│  │   OSS    │ │   S3     │ │  Blob    │ │   COS    │       │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘       │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -100,22 +96,54 @@ CREATE DATABASE objectstorage;
 }
 ```
 
-### 3. 配置权限策略
+### 3. JWT 配置
 
-存储模块使用 Users 模块的权限系统，需在数据库中配置以下权限：
+确保正确配置 JWT 设置：
 
-| 权限名称 | 描述 |
-|---------|------|
-| `storage.bucket.view` | 查看存储桶 |
-| `storage.bucket.create` | 创建存储桶 |
-| `storage.bucket.update` | 更新存储桶 |
-| `storage.bucket.delete` | 删除存储桶 |
-| `storage.object.view` | 查看/下载对象 |
-| `storage.object.create` | 上传对象 |
-| `storage.object.update` | 更新对象 |
-| `storage.object.delete` | 删除对象 |
+```json
+{
+  "JwtSettings": {
+    "SecretKey": "your-secret-key-min-32-characters",
+    "Issuer": "Stargazer.Orleans",
+    "Audience": "Stargazer.Orleans",
+    "ExpiryMinutes": 60,
+    "RefreshTokenExpiryMinutes": 10080
+  }
+}
+```
+
+### 4. 种子数据
+
+Silo 启动时自动初始化以下数据：
+
+- **8 个权限**: `storage.bucket.view`, `storage.bucket.create`, `storage.bucket.update`, `storage.bucket.delete`, `storage.object.view`, `storage.object.create`, `storage.object.update`, `storage.object.delete`
+- **ObjectStorageAdmin 角色**: 拥有所有存储权限
+- **角色分配**: admin 用户自动获得 ObjectStorageAdmin 角色
+
+## 权限策略
+
+存储模块使用 Users 模块的权限系统，所有 API 需要 JWT 认证和权限检查：
+
+| 权限代码 | 名称 | 描述 |
+|---------|------|------|
+| `storage.bucket.view` | 查看存储桶 | 查看存储桶列表和详情 |
+| `storage.bucket.create` | 创建存储桶 | 创建新存储桶 |
+| `storage.bucket.update` | 更新存储桶 | 编辑存储桶信息 |
+| `storage.bucket.delete` | 删除存储桶 | 删除存储桶 |
+| `storage.object.view` | 查看对象 | 查看和下载对象 |
+| `storage.object.create` | 上传对象 | 上传新对象 |
+| `storage.object.update` | 更新对象 | 更新对象内容 |
+| `storage.object.delete` | 删除对象 | 删除对象 |
 
 ## API 接口
+
+### 认证
+
+所有 API 端点都需要有效的 JWT Token：
+
+```
+Authorization: Bearer <token>
+```
 
 ### 存储桶接口
 
@@ -135,16 +163,16 @@ CREATE DATABASE objectstorage;
 |------|------|------|------|
 | GET | `/api/storage/object/{bucketId}/{key}` | 下载对象 | storage.object.view |
 | HEAD | `/api/storage/object/{bucketId}/{key}` | 检查对象是否存在 | storage.object.view |
-| GET | `/api/storage/object/{bucketId}/{key}/metadata` | 获取对象元数据 | storage.object.view |
-| GET | `/api/storage/object/{bucketId}` | 列出对象 | storage.object.view |
+| GET | `/api/storage/object/metadata/{bucketId}/{key}` | 获取对象元数据 | storage.object.view |
+| GET | `/api/storage/object/{bucketId}` | 列出对象 (分页) | storage.object.view |
 | POST | `/api/storage/object/{bucketId}/{key}` | 上传对象 | storage.object.create |
 | PUT | `/api/storage/object/{bucketId}/{key}` | 更新对象 | storage.object.update |
 | DELETE | `/api/storage/object/{bucketId}/{key}` | 删除对象 | storage.object.delete |
-| GET | `/api/storage/object/{bucketId}/{key}/signed-url` | 获取签名URL | storage.object.view |
-| POST | `/api/storage/object/{bucketId}/{key}/multipart/initiate` | 初始化分片上传 | storage.object.create |
-| POST | `/api/storage/object/{bucketId}/{key}/multipart/{uploadId}/part` | 上传分片 | storage.object.create |
-| POST | `/api/storage/object/{bucketId}/{key}/multipart/{uploadId}/complete` | 完成分片上传 | storage.object.create |
-| DELETE | `/api/storage/object/{bucketId}/{key}/multipart/{uploadId}` | 取消分片上传 | storage.object.delete |
+| GET | `/api/storage/object/signed-url/{bucketId}/{key}` | 获取签名URL | storage.object.view |
+| POST | `/api/storage/object/multipart/initiate/{bucketId}/{key}` | 初始化分片上传 | storage.object.create |
+| POST | `/api/storage/object/multipart/part/{bucketId}/{uploadId}/{key}` | 上传分片 | storage.object.create |
+| POST | `/api/storage/object/multipart/complete/{bucketId}/{uploadId}/{key}` | 完成分片上传 | storage.object.create |
+| DELETE | `/api/storage/object/multipart/{bucketId}/{uploadId}/{key}` | 取消分片上传 | storage.object.delete |
 
 ### 请求示例
 
@@ -172,7 +200,7 @@ curl -X POST http://localhost:5000/api/storage/object/{bucketId}/my-file.txt \
 
 #### 获取签名 URL
 ```bash
-curl -X GET "http://localhost:5000/api/storage/object/{bucketId}/my-file.txt/signed-url?expiry=01:00:00&method=GET" \
+curl -X GET "http://localhost:5000/api/storage/object/signed-url/{bucketId}/my-file.txt?expiry=01:00:00&method=GET" \
   -H "Authorization: Bearer <token>"
 ```
 
@@ -319,20 +347,9 @@ ObjectStorage 模块依赖 Users 模块进行身份认证和权限检查：
 1. **JWT 认证**: 所有 API 端点都需要有效的 JWT Token
 2. **权限检查**: 基于存储桶 ACL 和用户角色进行授权
 3. **用户绑定**: 存储桶和对象与用户 ID 关联
+4. **种子数据**: Silo 启动时自动初始化 ObjectStorageAdmin 角色和权限
 
-确保已正确配置 Users 模块的 JWT 设置：
-
-```json
-{
-  "JwtSettings": {
-    "SecretKey": "your-secret-key",
-    "Issuer": "Stargazer.Orleans",
-    "Audience": "Stargazer.Orleans",
-    "ExpiryMinutes": 60,
-    "RefreshTokenExpiryMinutes": 10080
-  }
-}
-```
+确保已正确配置 Users 模块的 JWT 设置（见上文配置章节）。
 
 ## 项目结构
 
@@ -340,15 +357,15 @@ ObjectStorage 模块依赖 Users 模块进行身份认证和权限检查：
 modules/ObjectStorage/
 ├── src/
 │   ├── Stargazer.Orleans.ObjectStorage.Domain/
-│   │   ├── Entities/
-│   │   │   ├── Bucket.cs
-│   │   │   ├── ObjectInfo.cs
-│   │   │   ├── MultipartUpload.cs
-│   │   │   └── BucketPolicy.cs
-│   │   ├── Entity.cs
-│   │   └── IEntity.cs
+│   │   └── Entities/
+│   │       ├── Bucket.cs
+│   │       ├── ObjectInfo.cs
+│   │       ├── MultipartUpload.cs
+│   │       └── BucketPolicy.cs
 │   │
 │   ├── Stargazer.Orleans.ObjectStorage.Grains.Abstractions/
+│   │   ├── Authorization/
+│   │   │   └── StoragePolicies.cs      # 权限策略常量
 │   │   ├── IBucketGrain.cs
 │   │   ├── IObjectGrain.cs
 │   │   ├── Storage/
@@ -360,9 +377,11 @@ modules/ObjectStorage/
 │   │       └── SignedUrlDto.cs
 │   │
 │   ├── Stargazer.Orleans.ObjectStorage.Grains/
-│   │   └── Grains/
-│   │       ├── BucketGrain.cs
-│   │       └── ObjectGrain.cs
+│   │   ├── Grains/
+│   │   │   ├── BucketGrain.cs
+│   │   │   └── ObjectGrain.cs
+│   │   └── SeedData/
+│   │       └── StorageSeedDataInitializer.cs  # 种子数据初始化
 │   │
 │   ├── Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL/
 │   │   ├── EfDbContext.cs
@@ -370,6 +389,8 @@ modules/ObjectStorage/
 │   │   └── EntityFramworkCoreExtensions.cs
 │   │
 │   └── Stargazer.Orleans.ObjectStorage.Silo/
+│       ├── Authorization/
+│       │   └── StoragePermissionHandler.cs    # 权限处理器
 │       ├── Controllers/
 │       │   ├── BucketController.cs
 │       │   └── ObjectController.cs
@@ -385,110 +406,95 @@ modules/ObjectStorage/
 │       ├── OrleansServerExtension.cs
 │       └── Program.cs
 │
+├── tests/
+│   └── Stargazer.Orleans.ObjectStorage.Tests/
+│       ├── Configuration/
+│       ├── Domain/
+│       ├── Dto/
+│       ├── Grains/
+│       ├── Integration/                      # 集成测试
+│       │   ├── TestWebApplicationFactory.cs
+│       │   ├── IntegrationTestBase.cs
+│       │   ├── BucketControllerIntegrationTests.cs
+│       │   └── ObjectControllerIntegrationTests.cs
+│       └── Storage/
+│
 └── README.md
 ```
 
-## 单元测试
+## 权限实现
 
-ObjectStorage 模块包含完整的单元测试，涵盖配置、存储提供者、数据模型和 DTO。
+### StoragePolicies (权限策略常量)
 
-### 测试结构
-
+```csharp
+public static class StoragePolicies
+{
+    public static class Buckets
+    {
+        public const string View = "storage.bucket.view";
+        public const string Create = "storage.bucket.create";
+        public const string Update = "storage.bucket.update";
+        public const string Delete = "storage.bucket.delete";
+    }
+    
+    public static class Objects
+    {
+        public const string View = "storage.object.view";
+        public const string Create = "storage.object.create";
+        public const string Update = "storage.object.update";
+        public const string Delete = "storage.object.delete";
+    }
+}
 ```
-modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests/
-├── Configuration/
-│   └── StorageSettingsTests.cs (8 tests)
-├── Storage/
-│   ├── LocalStorageProviderTests.cs (13 tests)
-│   └── StorageProviderFactoryTests.cs (3 tests)
-├── Domain/
-│   └── EntityTests.cs (8 tests)
-└── Dto/
-    └── DtoTests.cs (7 tests)
-```
 
-### 运行测试
+### StoragePermissionHandler (权限处理器)
+
+实现 `IAuthorizationHandler`，验证用户是否拥有所需权限。
+
+### StorageSeedDataInitializer (种子数据初始化)
+
+实现 Orleans `IStartupTask`，在 Silo 启动时：
+1. 创建存储桶/对象权限
+2. 创建 ObjectStorageAdmin 角色并分配所有权限
+3. 为 admin 用户分配 ObjectStorageAdmin 角色
+
+## 测试
+
+### 单元测试
+
+| 测试类 | 说明 |
+|--------|------|
+| `StorageSettingsTests` | 配置解析、默认值、存储提供者创建 |
+| `LocalStorageProviderTests` | 文件读写、目录管理、存在性检查 |
+| `StorageProviderFactoryTests` | 工厂模式、未知提供者处理 |
+| `EntityTests` | Bucket、ObjectInfo、MultipartUpload、BucketPolicy 实体 |
+| `DtoTests` | DTO 属性映射和验证 |
+
+运行单元测试：
 
 ```bash
-# 运行所有测试
-dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests
-
-# 运行特定测试类
-dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests --filter "FullyQualifiedName~LocalStorageProviderTests"
-
-# 运行单个测试
-dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests --filter "FullyQualifiedName~LocalStorageProviderTests.FileExists_ReturnsFalseForNonExistentFile"
-
-# 查看详细输出
-dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests --verbosity normal
+dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests --filter "Category!=Integration"
 ```
 
-### 测试覆盖
+### 集成测试
 
-| 测试类 | 测试内容 |
-|--------|----------|
-| **StorageSettingsTests** | 配置解析、默认值、存储提供者创建 |
-| **LocalStorageProviderTests** | 文件读写、目录管理、存在性检查 |
-| **StorageProviderFactoryTests** | 工厂模式、未知提供者处理 |
-| **EntityTests** | Bucket、ObjectInfo、MultipartUpload、BucketPolicy 实体 |
-| **DtoTests** | DTO 属性映射和验证 |
+| 测试类 | 说明 |
+|--------|------|
+| `BucketControllerIntegrationTests` | 存储桶 CRUD、权限检查 |
+| `ObjectControllerIntegrationTests` | 对象操作、签名 URL、分片上传 |
 
-### 测试结果
+运行集成测试：
 
-```
-Passed! - Failed: 0, Passed: 39, Skipped: 0, Total: 39
+```bash
+RUN_INTEGRATION_TESTS=true dotnet test modules/ObjectStorage/tests/Stargazer.Orleans.ObjectStorage.Tests --filter "Category=Integration"
 ```
 
-### 测试详情
+> **测试总数**: 58 个测试
 
-#### StorageSettingsTests (8 tests)
-- `DefaultExpiryMinutes_ReturnsCorrectValue` - 验证默认过期时间
-- `DefaultExpiryMinutes_Returns60WhenNotConfigured` - 验证未配置时的默认值
-- `MaxSignedUrlExpirySeconds_Returns7Days` - 验证最大签名 URL 过期时间
-- `MaxSignedUrlExpirySeconds_Returns604800` - 验证最大过期秒数
-- `MultipartUploadExpiryMinutes_Returns7Days` - 验证分片上传过期时间
-- `MultipartUploadExpiryMinutes_Returns10080WhenNotConfigured` - 验证默认值
-- `CreateStorageProvider_ThrowsForUnknownProvider` - 验证未知提供者抛出异常
-- `CreateStorageProvider_CreatesLocalProvider` - 验证本地提供者创建
-
-#### LocalStorageProviderTests (13 tests)
-- `FileExists_ReturnsTrueForExistingFile` - 验证已存在文件检测
-- `FileExists_ReturnsFalseForNonExistentFile` - 验证不存在文件检测
-- `UploadAsync_SavesFileToCorrectPath` - 验证文件上传路径
-- `UploadAsync_CreatesParentDirectories` - 验证父目录自动创建
-- `UploadAsync_StoresMetadata` - 验证元数据存储
-- `DownloadAsync_ReturnsFileContent` - 验证文件下载
-- `DeleteAsync_RemovesFile` - 验证文件删除
-- `GetSignedUrl_ReturnsUrl` - 验证签名 URL 生成
-- `ListObjectsAsync_ReturnsObjectList` - 验证对象列表
-- `DirectoryExists_ReturnsTrueForExistingDirectory` - 验证目录存在检查
-- `CreateDirectory_CreatesDirectory` - 验证目录创建
-- `DeleteDirectory_RemovesDirectory` - 验证目录删除
-- `GetStorageStats_ReturnsCorrectStats` - 验证存储统计
-
-#### StorageProviderFactoryTests (3 tests)
-- `CreateProvider_ReturnsLocalStorageProvider` - 验证返回本地存储提供者
-- `CreateProvider_ThrowsForUnknownProvider` - 验证未知提供者异常
-- `GetTypeName_ReturnsCorrectType` - 验证类型名称获取
-
-#### EntityTests (8 tests)
-- `Bucket_DefaultValues_AreCorrect` - 验证 Bucket 默认值
-- `Bucket_CanSetProperties` - 验证 Bucket 属性设置
-- `ObjectInfo_DefaultValues_AreCorrect` - 验证 ObjectInfo 默认值
-- `ObjectInfo_CanSetProperties` - 验证 ObjectInfo 属性设置
-- `MultipartUpload_DefaultValues_AreCorrect` - 验证 MultipartUpload 默认值
-- `MultipartUpload_CanSetProperties` - 验证 MultipartUpload 属性设置
-- `BucketPolicy_DefaultValues_AreCorrect` - 验证 BucketPolicy 默认值
-- `BucketPolicy_CanSetProperties` - 验证 BucketPolicy 属性设置
-
-#### DtoTests (7 tests)
-- `BucketDto_CanSetProperties` - 验证 BucketDto 属性设置
-- `ObjectMetadataDto_CanSetProperties` - 验证 ObjectMetadataDto 属性设置
-- `UploadResultDto_CanSetProperties` - 验证 UploadResultDto 属性设置
-- `SignedUrlDto_CanSetProperties` - 验证 SignedUrlDto 属性设置
-- `CreateBucketInputDto_CanSetProperties` - 验证 CreateBucketInputDto 属性设置
-- `CreateObjectInputDto_CanSetProperties` - 验证 CreateObjectInputDto 属性设置
-- `UpdateBucketInputDto_CanSetProperties` - 验证 UpdateBucketInputDto 属性设置
+> **注意**: 运行集成测试需要：
+> 1. 启动 PostgreSQL 和 Redis
+> 2. 启动 Users Silo（端口 5079）
+> 3. 启动 ObjectStorage Silo
 
 ## 注意事项
 
@@ -497,3 +503,5 @@ Passed! - Failed: 0, Passed: 39, Skipped: 0, Total: 39
 3. **分片上传**: 分片信息有效期为 7 天
 4. **并发控制**: 同一对象的并发上传/删除需要应用层处理
 5. **MinIO Multipart Upload**: MinioProvider 的分片上传通过临时对象模拟实现，不使用原生 S3 分片上传 API
+6. **JWT 配置**: 必须正确配置 JwtSettings，否则 API 请求会被拒绝
+7. **初始化顺序**: Users 模块的种子数据需先执行，确保 admin 用户存在

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore.Migrations;
-using Stargazer.Orleans.ObjectStorage.Domain.Entities;
+using Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage;
 
 #nullable disable
 

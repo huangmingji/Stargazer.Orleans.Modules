@@ -24,36 +24,41 @@
 - 权限类型分类 (Operation/Menu/Button/Api)
 - 权限与角色关联
 
+### 种子数据初始化
+- Silo 启动时自动初始化权限
+- 创建 Admin 角色并分配所有权限
+- 创建默认 admin 用户 (账号: admin, 密码: Admin@123456)
+
 ## 架构设计
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        API Layer                            │
-│  ┌──────────────────┐  ┌──────────────────────────────┐   │
-│  │ AccountController│  │     UserController           │   │
-│  │  /api/account   │  │     /api/user               │   │
-│  └────────┬─────────┘  └─────────────┬────────────────┘   │
+│  ┌──────────────────┐  ┌──────────────────────────────┐     │
+│  │ AccountController│  │     UserController           │     │
+│  │  /api/account    │  │     /api/user                │     │
+│  └────────┬─────────┘  └─────────────┬────────────────┘     │
 │           │                          │                      │
-│  ┌──────────────────┐  ┌──────────────────────────────┐   │
-│  │ RoleController   │  │    PermissionController       │   │
-│  │  /api/role      │  │    /api/permission          │   │
-│  └────────┬─────────┘  └────────────────┬─────────────┘   │
+│  ┌──────────────────┐  ┌──────────────────────────────┐     │
+│  │ RoleController   │  │    PermissionController      │     │
+│  │  /api/role       │  │    /api/permission           │     │
+│  └────────┬─────────┘  └────────────────┬─────────────┘     │
 └───────────┼─────────────────────────────┼───────────────────┘
             │                             │
             ▼                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      Grain Layer                            │
-│  ┌──────────────────┐  ┌────────────────────────────┐      │
-│  │    UserGrain     │  │        RoleGrain           │      │
-│  │  - Register      │  │  - CRUD Role               │      │
-│  │  - Login         │  │  - Assign Permissions      │      │
-│  │  - Password      │  │  - Check Permission        │      │
-│  │  - Profile       │  └─────────────┬──────────────┘      │
-│  └────────┬─────────┘                │                     │
-│           │                          ▼                     │
+│  ┌──────────────────┐  ┌────────────────────────────┐       │
+│  │    UserGrain     │  │        RoleGrain           │       │
+│  │  - Register      │  │  - CRUD Role               │       │
+│  │  - Login         │  │  - Assign Permissions      │       │
+│  │  - Password      │  │  - Check Permission        │       │
+│  │  - Profile       │  └─────────────┬──────────────┘       │
+│  └────────┬─────────┘                │                      │
+│           │                          ▼                      │
 │           │         ┌────────────────────────────┐          │
-│           └────────►│     PermissionGrain      │          │
-│                     │  - CRUD Permission        │          │
+│           └────────►│     PermissionGrain        │          │
+│                     │  - CRUD Permission         │          │
 │                     └────────────────────────────┘          │
 └─────────────────────────────────────────────────────────────┘
             │
@@ -61,18 +66,9 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                   Repository Layer                          │
 │  ┌──────────────────────────────────────────────────────┐   │
-│  │              IRepository<TKey>                        │   │
+│  │              IRepository<TKey>                       │   │
 │  │  - UserData / RoleData / PermissionData              │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-            │
-            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   Database Layer                            │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │         EntityFrameworkCore (PostgreSQL)              │   │
-│  │  - EfDbContext                                       │   │
-│  │  - Repository<TKey>                                  │   │
+│  │  - UserRoleData / RolePermissionData                 │   │
 │  └──────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -112,30 +108,46 @@ CREATE DATABASE users;
 }
 ```
 
-**注意**: RefreshToken 现在使用 JWT 格式，有效期由 `RefreshTokenExpiryDays` 控制（默认 7 天）。
+### 3. Silo 启动自动初始化
 
-### 3. 初始化权限数据
+Silo 启动时自动初始化以下数据：
 
-系统需要初始化的权限和角色：
+#### 权限 (13 个)
+| 权限代码 | 名称 | 描述 |
+|---------|------|------|
+| `users.view` | 查看用户 | 查看用户列表和详情 |
+| `users.create` | 创建用户 | 创建新用户 |
+| `users.update` | 更新用户 | 编辑用户信息 |
+| `users.delete` | 删除用户 | 删除用户 |
+| `users.assign_role` | 分配用户角色 | 为用户分配角色 |
+| `roles.view` | 查看角色 | 查看角色列表 |
+| `roles.create` | 创建角色 | 创建新角色 |
+| `roles.update` | 更新角色 | 编辑角色信息 |
+| `roles.delete` | 删除角色 | 删除角色 |
+| `roles.assign_permission` | 分配角色权限 | 为角色分配权限 |
+| `permissions.view` | 查看权限 | 查看权限列表 |
+| `permissions.create` | 创建权限 | 创建新权限 |
+| `permissions.update` | 更新权限 | 编辑权限信息 |
+| `permissions.delete` | 删除权限 | 删除权限 |
 
-| 类型 | 名称 | 描述 |
-|------|------|------|
-| 权限 | `users.view` | 查看用户 |
-| 权限 | `users.create` | 创建用户 |
-| 权限 | `users.update` | 更新用户 |
-| 权限 | `users.delete` | 删除用户 |
-| 权限 | `users.assign_role` | 分配用户角色 |
-| 权限 | `roles.view` | 查看角色 |
-| 权限 | `roles.create` | 创建角色 |
-| 权限 | `roles.update` | 更新角色 |
-| 权限 | `roles.delete` | 删除角色 |
-| 权限 | `roles.assign_permission` | 分配角色权限 |
-| 权限 | `permissions.view` | 查看权限 |
-| 权限 | `permissions.create` | 创建权限 |
-| 权限 | `permissions.update` | 更新权限 |
-| 权限 | `permissions.delete` | 删除权限 |
+#### 角色 (1 个)
+- **Admin**: 系统管理员角色，拥有所有权限
+
+#### 用户 (1 个)
+- **admin**: 默认管理员账户
+  - 账号: `admin`
+  - 密码: `Admin@123456`
+  - 拥有 Admin 角色
 
 ## API 接口
+
+### 认证
+
+账户接口无需认证，其他接口需要 JWT Token：
+
+```
+Authorization: Bearer <token>
+```
 
 ### 账户接口
 
@@ -201,8 +213,8 @@ curl -X POST http://localhost:5000/api/account/register \
 curl -X POST http://localhost:5000/api/account/login \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "newuser",
-    "password": "Test@123456"
+    "name": "admin",
+    "password": "Admin@123456"
   }'
 ```
 
@@ -221,8 +233,8 @@ curl -X POST http://localhost:5000/api/role \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "Admin",
-    "description": "Administrator role"
+    "name": "CustomRole",
+    "description": "Custom role"
   }'
 ```
 
@@ -255,7 +267,6 @@ curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
 
 ```json
 {
-  "success": true,
   "code": "success",
   "message": "success",
   "data": { ... }
@@ -265,7 +276,6 @@ curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
 失败响应：
 ```json
 {
-  "success": false,
   "code": "error_code",
   "message": "错误描述"
 }
@@ -322,6 +332,15 @@ curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
 | Id | GUID | 主键 |
 | UserId | GUID | 用户 ID |
 | RoleId | GUID | 角色 ID |
+| IsActive | bool | 是否激活 |
+| CreationTime | DateTime | 创建时间 |
+
+### RolePermissionData (角色权限关联)
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| Id | GUID | 主键 |
+| RoleId | GUID | 角色 ID |
+| PermissionId | GUID | 权限 ID |
 | CreationTime | DateTime | 创建时间 |
 
 ## JWT Token 结构
@@ -342,7 +361,7 @@ curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
 ```
 
 ### Refresh Token
-RefreshToken 现在使用与 AccessToken 相同的 JWT 格式，包含：
+RefreshToken 使用 JWT 格式，包含：
 - `jti`: JWT ID
 - `iat`: 签发时间
 - `exp`: 过期时间（默认 7 天）
@@ -392,6 +411,39 @@ public class SomeGrain : Grain, ISomeGrain
 }
 ```
 
+### 权限策略常量
+
+```csharp
+public static class AuthorizationPermissions
+{
+    public static class Users
+    {
+        public const string View = "users.view";
+        public const string Create = "users.create";
+        public const string Update = "users.update";
+        public const string Delete = "users.delete";
+        public const string Assign = "users.assign_role";
+    }
+
+    public static class Roles
+    {
+        public const string View = "roles.view";
+        public const string Create = "roles.create";
+        public const string Update = "roles.update";
+        public const string Delete = "roles.delete";
+        public const string Assign = "roles.assign_permission";
+    }
+
+    public static class Permissions
+    {
+        public const string View = "permissions.view";
+        public const string Create = "permissions.create";
+        public const string Update = "permissions.update";
+        public const string Delete = "permissions.delete";
+    }
+}
+```
+
 ## 项目结构
 
 ```
@@ -406,8 +458,10 @@ modules/Users/
 │   │   │   └── RoleData.cs
 │   │   ├── Permissions/
 │   │   │   └── PermissionData.cs
-│   │   └── UserRoles/
-│   │       └── UserRoleData.cs
+│   │   ├── UserRoles/
+│   │   │   └── UserRoleData.cs
+│   │   └── RolePermissions/
+│   │       └── RolePermissionData.cs
 │   │
 │   ├── Stargazer.Orleans.Users.Grains.Abstractions/
 │   │   ├── PageResult.cs
@@ -438,13 +492,13 @@ modules/Users/
 │   ├── Stargazer.Orleans.Users.Grains/
 │   │   ├── MapperProfile.cs
 │   │   ├── Grains/
-│   │   │   └── UserGrain.cs
+│   │   │   ├── UserGrain.cs
+│   │   │   └── UsersSeedDataInitializer.cs  # 种子数据初始化
 │   │   └── Roles/
 │   │       ├── RoleGrain.cs
 │   │       └── PermissionGrain.cs
 │   │
 │   ├── Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL/
-│   │   ├── EfDbContext.cs
 │   │   ├── IRepository.cs
 │   │   ├── Repository.cs
 │   │   ├── EntityNotFoundException.cs
@@ -498,38 +552,41 @@ modules/Users/
 
 Users 模块包含完整的单元测试：
 
-```
-modules/Users/tests/Stargazer.Orleans.Users.Tests/
-├── Security/
-│   └── JwtTokenServiceTests.cs
-├── Domain/
-│   └── EntityTests.cs
-└── Dto/
-    └── DtoTests.cs
-```
+| 测试类 | 说明 |
+|--------|------|
+| `JwtTokenServiceTests` | JWT Token 服务测试 |
+| `EntityTests` | 实体测试（UserData、RoleData、PermissionData） |
+| `DtoTests` | DTO 测试 |
 
 运行单元测试：
 
 ```bash
-dotnet test modules/Users/tests/Stargazer.Orleans.Users.Tests
+dotnet test modules/Users/tests/Stargazer.Orleans.Users.Tests --filter "Category!=Integration"
 ```
 
 ### 集成测试
 
 集成测试覆盖所有 Controller API：
 
-```
-modules/Users/tests/Stargazer.Orleans.Users.Tests/Integration/
-├── AccountControllerIntegrationTests.cs  (6 tests)
-├── UserControllerIntegrationTests.cs     (25 tests)
-├── RoleControllerIntegrationTests.cs     (7 tests)
-└── PermissionControllerIntegrationTests.cs (8 tests)
+| 测试类 | 说明 |
+|--------|------|
+| `AccountControllerIntegrationTests` | 账户接口测试 |
+| `UserControllerIntegrationTests` | 用户接口测试 |
+| `RoleControllerIntegrationTests` | 角色接口测试 |
+| `PermissionControllerIntegrationTests` | 权限接口测试 |
+
+运行集成测试：
+
+```bash
+RUN_INTEGRATION_TESTS=true dotnet test modules/Users/tests/Stargazer.Orleans.Users.Tests --filter "Category=Integration"
 ```
 
-**注意**: 运行集成测试需要：
-1. 启动 PostgreSQL 和 Redis
-2. 启动 Orleans Silo
-3. 或使用 Aspire Test Host
+> **测试总数**: 94 个测试
+
+> **注意**: 运行集成测试需要：
+> 1. 启动 PostgreSQL 和 Redis
+> 2. 启动 Orleans Silo
+> 3. 或使用 Aspire Test Host
 
 ## 注意事项
 
@@ -539,3 +596,5 @@ modules/Users/tests/Stargazer.Orleans.Users.Tests/Integration/
 4. **软删除**: 用户和角色使用软删除，已删除数据不能重复使用
 5. **Redis 集群**: 模块依赖 Redis 进行 Orleans 集群管理
 6. **RefreshToken 格式**: RefreshToken 使用 JWT 格式，可通过 `ValidateToken` 验证
+7. **初始化顺序**: Users 模块需先启动，确保 `Admin` 用户存在，再初始化其他业务模块
+8. **Silo 注册**: 其他模块使用 Users 模块的权限系统时，需先确保 Users Silo 运行

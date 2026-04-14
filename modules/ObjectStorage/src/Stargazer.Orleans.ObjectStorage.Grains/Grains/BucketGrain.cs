@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
-using Stargazer.Orleans.ObjectStorage.Domain.Entities;
+using Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage;
 using Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions;
 using Stargazer.Orleans.ObjectStorage.Grains.Abstractions.Authorization;
