@@ -115,6 +115,13 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
     public async Task<IActionResult> GetObjectMetadata(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
+        var bucket = await bucketGrain.GetBucketAsync(bucketId, cancellationToken);
+        if (bucket == null)
+        {
+            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
+        }
+        
         var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
         if (!hasAccess)
         {
@@ -265,6 +272,13 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     [Authorize(policy: $"permission:{StoragePolicies.Objects.Delete}")]
     public async Task<IActionResult> DeleteObject(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
+        var bucket = await bucketGrain.GetBucketAsync(bucketId, cancellationToken);
+        if (bucket == null)
+        {
+            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
+        }
+        
         var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
         if (!hasAccess)
         {
@@ -296,6 +310,13 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
     public async Task<IActionResult> GetSignedUrl(Guid bucketId, string key, [FromQuery] TimeSpan expiry, [FromQuery] string method = "GET", CancellationToken cancellationToken = default)
     {
+        var bucketGrain = client.GetGrain<IBucketGrain>(0);
+        var bucket = await bucketGrain.GetBucketAsync(bucketId, cancellationToken);
+        if (bucket == null)
+        {
+            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
+        }
+        
         var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
         if (!hasAccess)
         {

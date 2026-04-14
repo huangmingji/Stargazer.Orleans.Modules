@@ -123,10 +123,14 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     /// <returns>更新后的存储桶信息</returns>
     [HttpPut("{id:guid}")]
     [Authorize(policy: $"permission:{StoragePolicies.Buckets.Update}")]
-    public async Task<IActionResult> UpdateBucket(Guid id, [FromBody] BucketDto bucket, CancellationToken cancellationToken = default)
+    public async Task<IActionResult> UpdateBucket(Guid id, [FromBody] BucketDto input, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
         var bucketGrain = client.GetGrain<IBucketGrain>(0);
+        
+        var bucket = await bucketGrain.GetBucketAsync(id, cancellationToken);
+        if (bucket == null)
+            return NotFound(ResponseData.Fail(code: "bucket_not_found", message: "Bucket not found."));
         
         var hasAccess = await bucketGrain.HasAccessPermissionAsync(id, userId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
@@ -136,7 +140,7 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
 
         try
         {
-            var updated = await bucketGrain.UpdateBucketAsync(id, bucket, cancellationToken);
+            var updated = await bucketGrain.UpdateBucketAsync(id, input, cancellationToken);
             return Ok(ResponseData.Success(data: updated));
         }
         catch (InvalidOperationException)
@@ -158,6 +162,12 @@ public class BucketController(IClusterClient client, ILogger<BucketController> l
     {
         var userId = GetCurrentUserId();
         var bucketGrain = client.GetGrain<IBucketGrain>(0);
+        
+        var bucket = await bucketGrain.GetBucketAsync(id, cancellationToken);
+        if (bucket == null)
+        {
+            return NotFound(ResponseData.Fail(code: "bucket_not_found", message: "Bucket not found."));
+        }
         
         var isOwner = await bucketGrain.IsOwnerAsync(id, userId, cancellationToken);
         if (!isOwner)

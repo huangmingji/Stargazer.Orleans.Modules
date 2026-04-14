@@ -188,7 +188,8 @@ public class IntegrationTestBase : IClassFixture<TestWebApplicationFactory>, IAs
                 return (true, default, null);
             }
 
-            var success = response.StatusCode == HttpStatusCode.OK;
+            var success = response.StatusCode == HttpStatusCode.OK 
+                          || response.StatusCode == HttpStatusCode.Created;
             string? errorCode = null;
             if (root.TryGetProperty("code", out var codeElement) && codeElement.ValueKind == JsonValueKind.String)
             {

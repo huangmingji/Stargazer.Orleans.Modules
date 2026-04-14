@@ -119,7 +119,7 @@ public class BucketControllerIntegrationTests : IntegrationTestBase
             Acl = "Private"
         };
 
-        var (success, data, _) = await PostAsync<BucketDto>("api/storage/bucket", bucket);
+        var (success, data, errorCode) = await PostAsync<BucketDto>("api/storage/bucket", bucket);
         Assert.True(success);
         Assert.NotNull(data);
 
