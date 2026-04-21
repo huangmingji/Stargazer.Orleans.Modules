@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.5" />
+    <PackageReference Include="Microsoft.Orleans.Core" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Persistence.AdoNet" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Runtime" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Orleans.Streaming" Version="10.0.1" />
+    <PackageReference Include="Npgsql" Version="10.0.2" />
+    <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
+    <PackageReference Include="Senparc.Weixin.MP" Version="16.24.2" />
+    <PackageReference Include="Senparc.Weixin.MP.Middleware" Version="1.5.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL\Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.WechatManagement.Domain\Stargazer.Orleans.WechatManagement.Domain.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.WechatManagement.Grains.Abstractions\Stargazer.Orleans.WechatManagement.Grains.Abstractions.csproj" />
+    <ProjectReference Include="..\..\..\Users\src\Stargazer.Orleans.Users.Grains.Abstractions\Stargazer.Orleans.Users.Grains.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

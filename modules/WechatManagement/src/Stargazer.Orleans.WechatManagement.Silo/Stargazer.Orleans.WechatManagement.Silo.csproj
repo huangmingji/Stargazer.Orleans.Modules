@@ -11,25 +11,27 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
     <PackageReference Include="Scalar.AspNetCore" Version="2.13.22" />
+    <PackageReference Include="Senparc.Weixin.MP" Version="16.24.2" />
+    <PackageReference Include="Senparc.Weixin.MP.Middleware" Version="1.5.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Settings.Configuration" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
-
     <PackageReference Include="Microsoft.Orleans.Clustering.AdoNet" Version="10.0.1" />
     <PackageReference Include="Microsoft.Orleans.Clustering.Consul" Version="10.0.1" />
     <PackageReference Include="Microsoft.Orleans.Clustering.Redis" Version="10.0.1" />
     <PackageReference Include="Microsoft.Orleans.Persistence.Redis" Version="10.0.1" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="10.0.1" />
     <PackageReference Include="Npgsql" Version="10.0.2" />
-
+    <PackageReference Include="StackExchange.Redis" Version="2.9.32" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\aspire\Stargazer.ServiceDefaults\Stargazer.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations\Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations.csproj" />
-    <ProjectReference Include="..\Stargazer.Orleans.Users.Grains\Stargazer.Orleans.Users.Grains.csproj" />
+    <ProjectReference Include="..\..\..\Users\src\Stargazer.Orleans.Users.Grains.Abstractions\Stargazer.Orleans.Users.Grains.Abstractions.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL.DbMigrations\Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL.DbMigrations.csproj" />
+    <ProjectReference Include="..\Stargazer.Orleans.WechatManagement.Grains\Stargazer.Orleans.WechatManagement.Grains.csproj" />
   </ItemGroup>
 
 
