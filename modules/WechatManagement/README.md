@@ -21,6 +21,11 @@
 - 群发消息发送
 - 被动回复
 
+### 微信扫码登录
+- 二维码生成
+- 扫码回调处理
+- 微信用户与本地账号绑定/解绑
+
 ## 模块结构
 
 ```
@@ -89,6 +94,16 @@ WechatManagement/
 | GET | `/api/wechat/{accountId}/callback` | 验证服务器 |
 | POST | `/api/wechat/{accountId}/callback` | 接收微信消息 |
 
+### 微信扫码登录
+
+| 方法 | 路由 | 说明 |
+|------|------|------|
+| GET | `/api/wechat/{accountId}/auth/qrcode` | 获取登录二维码 |
+| POST | `/api/wechat/{accountId}/auth/bind` | 绑定本地账号 |
+| POST | `/api/wechat/{accountId}/auth/unbind` | 解绑微信用户 |
+| GET | `/api/wechat/{accountId}/auth/status` | 获取绑定状态 |
+| POST | `/api/wechat/{accountId}/auth/callback` | 扫码回调处理 |
+
 ## 微信事件处理
 
 ### 用户关注事件
@@ -99,6 +114,24 @@ WechatManagement/
 
 ### 用户取消关注事件
 当用户取消关注公众号时，系统会自动更新用户状态。
+
+## 微信扫码登录流程
+
+1. **获取二维码**: 用户访问 `/api/wechat/{accountId}/auth/qrcode` 获取登录二维码
+2. **扫码授权**: 用户在微信中扫描二维码并授权
+3. **回调处理**: 微信服务器推送扫码结果到 `/api/wechat/{accountId}/auth/callback`
+4. **绑定账号**: 前端调用 `/api/wechat/{accountId}/auth/bind` 绑定本地账号
+5. **获取 Token**: 绑定成功后返回本地系统的认证 Token
+
+### 微信用户绑定
+
+系统使用 `WechatUserBinding` 实体存储微信用户与本地用户的绑定关系：
+- `WechatUserId` - 微信用户 ID
+- `LocalUserId` - 本地用户 ID
+- `AccountId` - 公众号 ID
+- `OpenId` - 微信 OpenId
+- `BindingTime` - 绑定时间
+- `IsActive` - 绑定状态
 
 ## 配置
 

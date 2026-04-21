@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL.DbMigrations;
@@ -11,9 +12,11 @@ using Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL.DbMigrat
 namespace Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL.DbMigrations.Migrations
 {
     [DbContext(typeof(EfDbMigrationsContext))]
-    partial class EfDbMigrationsContextModelSnapshot : ModelSnapshot
+    [Migration("20260421114232_CreateWechatUserBinding")]
+    partial class CreateWechatUserBinding
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
