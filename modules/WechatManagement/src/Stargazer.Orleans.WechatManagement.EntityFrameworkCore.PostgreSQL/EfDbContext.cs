@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Stargazer.Orleans.WechatManagement.Domain;
 using Stargazer.Orleans.WechatManagement.Domain.Accounts;
 using Stargazer.Orleans.WechatManagement.Domain.Messages;
 using Stargazer.Orleans.WechatManagement.Domain.Users;
@@ -12,6 +13,7 @@ public class EfDbContext(DbContextOptions<EfDbContext> options) : DbContext(opti
     public DbSet<WechatUserGroup> WechatUserGroups { get; set; }
     public DbSet<WechatUserTag> WechatUserTags { get; set; }
     public DbSet<WechatMessageLog> WechatMessageLogs { get; set; }
+    public DbSet<WechatUserBinding> WechatUserBindings { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

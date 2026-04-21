@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Stargazer.Orleans.WechatManagement.Domain;
 using Stargazer.Orleans.WechatManagement.Domain.Accounts;
 using Stargazer.Orleans.WechatManagement.Domain.Messages;
 using Stargazer.Orleans.WechatManagement.Domain.Users;
@@ -14,6 +15,7 @@ public static class DbContextModelCreatingExtensions
         ConfigureWechatUserGroup(builder);
         ConfigureWechatUserTag(builder);
         ConfigureWechatMessageLog(builder);
+        ConfigureWechatUserBinding(builder);
     }
 
     private static void ConfigureWechatAccount(ModelBuilder builder)
@@ -168,6 +170,27 @@ public static class DbContextModelCreatingExtensions
                 .WithMany()
                 .HasForeignKey(e => e.AccountId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
+    private static void ConfigureWechatUserBinding(ModelBuilder builder)
+    {
+        builder.Entity<WechatUserBinding>(entity =>
+        {
+            entity.ToTable("wechat_user_bindings");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnName("id");
+            entity.Property(e => e.WechatUserId).HasColumnName("wechat_user_id").IsRequired();
+            entity.Property(e => e.LocalUserId).HasColumnName("local_user_id").IsRequired();
+            entity.Property(e => e.AccountId).HasColumnName("account_id").IsRequired();
+            entity.Property(e => e.OpenId).HasColumnName("open_id").HasMaxLength(100).IsRequired();
+            entity.Property(e => e.BindingTime).HasColumnName("binding_time");
+            entity.Property(e => e.IsActive).HasColumnName("is_active").HasDefaultValue(true);
+
+            entity.HasIndex(e => e.AccountId);
+            entity.HasIndex(e => e.OpenId);
+            entity.HasIndex(e => e.LocalUserId);
+            entity.HasIndex(e => new { e.AccountId, e.OpenId }).IsUnique();
         });
     }
 }
