@@ -19,7 +19,7 @@ public class WechatMessageProducerGrain(IRepository<WechatMessageLog, Guid> repo
 
     public override Task OnActivateAsync(CancellationToken cancellationToken)
     {
-        _streamProvider = this.GetStreamProvider("RedisStream");
+        _streamProvider = this.GetStreamProvider("OrleansStreams");
         return base.OnActivateAsync(cancellationToken);
     }
 

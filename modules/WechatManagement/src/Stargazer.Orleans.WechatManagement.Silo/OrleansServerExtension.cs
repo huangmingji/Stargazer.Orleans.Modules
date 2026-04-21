@@ -1,5 +1,6 @@
 using System.Net;
 using Orleans.Configuration;
+using StackExchange.Redis;
 
 namespace Stargazer.Orleans.WechatManagement.Silo;
 
@@ -39,6 +40,9 @@ public static class OrleansServerExtension
                 //     options.ConfigurationOptions =
                 //         ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
                 // })
+                // .AddRedisStreams("OrleansStreams", options => {
+                //     options.ConfigureOptions = ConfigurationOptions.Parse(configuration.GetConnectionString("Redis") ?? "localhost:6379");
+                // })
                 .UseAdoNetClustering(options =>
                 {
                     options.Invariant = "Npgsql";
@@ -53,6 +57,14 @@ public static class OrleansServerExtension
                     options.Invariant = "Npgsql";
                     options.ConnectionString = configuration.GetConnectionString("Wechat");
                 })
+                // https://github.com/dotnet/orleans/blob/main/src/AdoNet/Orleans.Streaming.AdoNet/README.md
+                .AddAdoNetStreams(
+                    name: "OrleansStreams",
+                    configureOptions: options =>
+                    {
+                        options.Invariant = "Npgsql";
+                        options.ConnectionString = configuration.GetConnectionString("Wechat");
+                    })
                 .Configure<EndpointOptions>(options =>
                 {
                     options.SiloListeningEndpoint = new IPEndPoint(IPAddress.Loopback, orleansOptions.SiloPort);
