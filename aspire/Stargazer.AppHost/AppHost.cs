@@ -16,17 +16,17 @@ var messageManagementSilo = builder.AddProject<Projects.Stargazer_Orleans_Messag
     .WithReference(userSilo)
     .WaitFor(userSilo);
 
-var frontend = builder.AddNpmApp("frontend", "../../front-end/management", "dev")
-    .WithHttpEndpoint(port: 3001, env: "PORT")
-    .WithEnvironment(context =>
-    {
-        context.EnvironmentVariables["NODE_ENV"] = "development";
-    })
-    .WithReference(userSilo)
-    .WaitFor(userSilo)
-    .WithReference(objectStorageSilo)
-    .WaitFor(objectStorageSilo)
-    .WithReference(messageManagementSilo)
-    .WaitFor(messageManagementSilo);
+// var frontend = builder.AddNpmApp("frontend", "../../front-end/management", "dev")
+//     .WithHttpEndpoint(port: 3000, env: "PORT")
+//     .WithEnvironment(context =>
+//     {
+//         context.EnvironmentVariables["NODE_ENV"] = "development";
+//     })
+//     .WithReference(userSilo)
+//     .WaitFor(userSilo)
+//     .WithReference(objectStorageSilo)
+//     .WaitFor(objectStorageSilo)
+//     .WithReference(messageManagementSilo)
+//     .WaitFor(messageManagementSilo);
 
 builder.Build().Run();
