@@ -39,21 +39,21 @@ public class UserGrain(
 
     public async Task<bool> VerifyPasswordAsync(VerifyPasswordInputDto input, CancellationToken cancellationToken = default)
     {
-        logger.LogDebug("Verifying password for account {Account}", input.Name);
-        var userData = await userRepository.FindAsync(x => x.Account.Equals(input.Name), cancellationToken);
+        logger.LogDebug("Verifying password for account {Account}", input.Account);
+        var userData = await userRepository.FindAsync(x => x.Account.Equals(input.Account), cancellationToken);
         if (userData is null || !userData.IsActive)
         {
-            logger.LogWarning("Login failed: user {Account} not found or inactive", input.Name);
+            logger.LogWarning("Login failed: user {Account} not found or inactive", input.Account);
             return false;
         }
         var result = Cryptography.PasswordStorage.VerifyPassword(input.Password, userData.Password, userData.SecretKey);
         if (result)
         {
-            logger.LogInformation("User {Account} logged in successfully", input.Name);
+            logger.LogInformation("User {Account} logged in successfully", input.Account);
         }
         else
         {
-            logger.LogWarning("Login failed: invalid password for account {Account}", input.Name);
+            logger.LogWarning("Login failed: invalid password for account {Account}", input.Account);
         }
         return result;
     }

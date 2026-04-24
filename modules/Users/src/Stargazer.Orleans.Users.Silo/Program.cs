@@ -17,6 +17,8 @@ using Stargazer.Orleans.Users.Silo.Middleware;
 using Stargazer.Orleans.Users.Grains.Abstractions.Security;
 using Stargazer.Orleans.Users.Silo.Security;
 using System.Text;
+using System.Text.Json;
+using Newtonsoft.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -99,14 +101,20 @@ builder.Services.AddOpenApi(options =>
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 builder.Services.AddControllers()
-    .AddNewtonsoftJson(
-    op =>
+    .AddJsonOptions(options =>
     {
-        op.SerializerSettings.ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver();
-        op.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-        op.SerializerSettings.Converters.Add(new Ext.DateTimeJsonConverter());
-        op.SerializerSettings.Converters.Add(new Ext.LongJsonConverter());
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
     })
+    // .AddNewtonsoftJson(op =>
+    // {
+    //     op.SerializerSettings.ContractResolver = new DefaultContractResolver()
+    //     {
+    //         NamingStrategy = new SnakeCaseNamingStrategy()
+    //     };
+    //     op.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
+    //     // op.SerializerSettings.Converters.Add(new Ext.DateTimeJsonConverter());
+    //     op.SerializerSettings.Converters.Add(new Ext.LongJsonConverter());
+    // })
     .AddMvcOptions(options =>
     {
         options.Conventions.Insert(0, new CentralizedPrefixConvention(apiPrefix));

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Orleans;
 
 namespace Stargazer.Orleans.Users.Grains.Abstractions.Users.Dtos;
@@ -6,8 +7,10 @@ namespace Stargazer.Orleans.Users.Grains.Abstractions.Users.Dtos;
 public class VerifyPasswordInputDto
 {
     [Id(0)]
+    [JsonPropertyName("password")]
     public string Password { get; set; } = "";
 
     [Id(1)]
-    public string Name { get; set; } = "";
+    [JsonPropertyName("account")]
+    public string Account { get; set; } = "";
 }

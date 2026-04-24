@@ -1,13 +1,21 @@
+using System.Text.Json.Serialization;
+using Orleans;
+
 namespace Stargazer.Orleans.Users.Grains.Abstractions;
 
 [GenerateSerializer]
 public class ResponseData
 {
-    [Id(0)] public string Code { get; set; } = "";
+    [Id(0)]
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = "";
 
-    [Id(1)] public string Message { get; set; } = "";
+    [Id(1)]
+    [JsonPropertyName("message")]
+    public string Message { get; set; } = "";
 
     [Id(2)]
+    [JsonPropertyName("data")]
     public object? Data { get; set; }
     
     public static ResponseData Success(string code = "success", string message = "success", object? data = null)

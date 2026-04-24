@@ -15,6 +15,8 @@ public class AccountController(
     IJwtTokenService jwtTokenService) : ControllerBase
 {
     [HttpPost("login")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponseDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
     public async Task<IActionResult> LoginAsync([FromBody] VerifyPasswordInputDto input, CancellationToken cancellationToken)
     { 
         if (!ModelState.IsValid)
@@ -25,7 +27,7 @@ public class AccountController(
         var userGrain = client.GetGrain<IUserGrain>(0);
         if (await userGrain.VerifyPasswordAsync(input, cancellationToken))
         {
-            var user = await userGrain.GetUserDataAsync(input.Name, cancellationToken);
+            var user = await userGrain.GetUserDataAsync(input.Account, cancellationToken);
             if (user == null)
             {
                 return BadRequest(ResponseData.Fail(code: "user_not_found", message: "User not found."));
@@ -44,13 +46,15 @@ public class AccountController(
                 User = user
             };
 
-            return Ok(ResponseData.Success(data: response));
+            return Ok(response);
         }
 
         return BadRequest(ResponseData.Fail(code: "account_password_incorrect", message: "The account or password is incorrect."));
     }
     
     [HttpPost("register")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponseDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
     public async Task<IActionResult> RegisterAsync([FromBody] RegisterAccountInputDto input, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -76,10 +80,12 @@ public class AccountController(
             User = user
         };
 
-        return Ok(ResponseData.Success(data: response));
+        return Ok(response);
     }
     
     [HttpPost("refresh")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponseDto))]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
     public async Task<IActionResult> RefreshTokenAsync([FromBody] RefreshTokenInputDto input, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
@@ -126,6 +132,6 @@ public class AccountController(
             User = user
         };
 
-        return Ok(ResponseData.Success(data: response));
+        return Ok(response);
     }
 }

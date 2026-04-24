@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.Users.Grains.Abstractions;
 using Stargazer.Orleans.Users.Grains.Abstractions.Authorization;
+using Stargazer.Orleans.Users.Grains.Abstractions.Roles.Dtos;
 using Stargazer.Orleans.Users.Grains.Abstractions.Users;
 using Stargazer.Orleans.Users.Grains.Abstractions.Users.Dtos;
 
@@ -15,6 +16,8 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
 {
     [HttpGet("{id:guid}")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserDataDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
     public async Task<IActionResult> GetUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
@@ -25,38 +28,43 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
             return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
         }
         
-        return Ok(ResponseData.Success(data: user));
+        return Ok(user);
     }
     
     [HttpGet]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PageResult<UserDataDto>))]
     public async Task<IActionResult> GetUsers([FromQuery] string? keyword, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 10, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
         var result = await userGrain.GetUsersAsync(keyword, pageIndex, pageSize, cancellationToken);
-        return Ok(ResponseData.Success(data: result));
+        return Ok(result);
     }
     
     [HttpPost]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Create}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> CreateUser([FromBody] CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
         await userGrain.CreateUserAsync(input, cancellationToken);
-        return Ok(ResponseData.Success(message: "User created successfully."));
+        return Ok();
     }
     
     [HttpPut("{id:guid}")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] CreateOrUpdateUserInputDto input, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
         await userGrain.UpdateUserAsync(id, input, cancellationToken);
-        return Ok(ResponseData.Success(message: "User updated successfully."));
+        return Ok();
     }
     
     [HttpDelete("{id:guid}")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Delete}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
     public async Task<IActionResult> DeleteUser(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
@@ -67,11 +75,13 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
             return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
         }
         
-        return Ok(ResponseData.Success(message: "User deleted successfully."));
+        return Ok();
     }
     
     [HttpPost("{id:guid}/roles")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Assign}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
     public async Task<IActionResult> AssignRoles(Guid id, [FromBody] List<Guid> roleIds, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
@@ -82,29 +92,33 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
             return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
         }
         
-        return Ok(ResponseData.Success(message: "Roles assigned successfully."));
+        return Ok();
     }
     
     [HttpGet("{id:guid}/roles")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<RoleDataDto>))]
     public async Task<IActionResult> GetUserRoles(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
         var roles = await userGrain.GetUserRolesAsync(id, cancellationToken);
-        return Ok(ResponseData.Success(data: roles));
+        return Ok(roles);
     }
     
     [HttpGet("{id:guid}/permissions")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.View}")]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<PermissionDataDto>))]
     public async Task<IActionResult> GetUserPermissions(Guid id, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
         var permissions = await userGrain.GetUserPermissionsAsync(id, cancellationToken);
-        return Ok(ResponseData.Success(data: permissions));
+        return Ok(permissions);
     }
     
     [HttpPatch("{id:guid}/status")]
     [Authorize(policy: $"permission:{AuthorizationPermissions.Users.Update}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
     public async Task<IActionResult> UpdateUserStatus(Guid id, [FromBody] UpdateUserStatusInputDto input, CancellationToken cancellationToken = default)
     {
         var userGrain = client.GetGrain<IUserGrain>(0);
@@ -115,7 +129,7 @@ public class UserController(IClusterClient client, ILogger<UserController> logge
             return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
         }
         
-        return Ok(ResponseData.Success(message: $"User {(input.IsEnabled ? "enabled" : "disabled")} successfully."));
+        return Ok();
     }
     
     // [HttpGet("check/account/{account}")]

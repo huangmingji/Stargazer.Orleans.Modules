@@ -35,45 +35,63 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                        API Layer                            │
 │  ┌──────────────────┐  ┌──────────────────────────────┐     │
-│  │ AccountController│  │     UserController           │     │
-│  │  /api/account    │  │     /api/user                │     │
-│  └────────┬─────────┘  └─────────────┬────────────────┘     │
-│           │                          │                      │
-│  ┌──────────────────┐  ┌──────────────────────────────┐     │
-│  │ RoleController   │  │    PermissionController      │     │
-│  │  /api/role       │  │    /api/permission           │     │
-│  └────────┬─────────┘  └────────────────┬─────────────┘     │
-└───────────┼─────────────────────────────┼───────────────────┘
-            │                             │
-            ▼                             ▼
+│  │ AccountController│  │    CurrentUserController    │     │
+│  │  /api/account  │  │    /api/current-user        │     │
+│  └────────┬───────┘  └─────────────┬────────────────┘     │
+│           │                         │                        │
+│  ┌───────┴───────┐  ┌──────────┴──────────────┐            │
+│  │ UserController│  │    RoleController       │            │
+│  │  /api/user  │  │    /api/role          │            │
+│  └──────┬──────┘  └──────────┬───────────┘            │
+│         │                    │                        │
+│         │    ┌─────────────┴───────────┐                │
+│         └───► │ PermissionController │                │
+│              │  /api/permission   │                │
+│              └─────────────────────────┘                │
+└─────────────────────────────────────────────────────┘
+                      │
+                      ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      Grain Layer                            │
 │  ┌──────────────────┐  ┌────────────────────────────┐       │
-│  │    UserGrain     │  │        RoleGrain           │       │
-│  │  - Register      │  │  - CRUD Role               │       │
-│  │  - Login         │  │  - Assign Permissions      │       │
-│  │  - Password      │  │  - Check Permission        │       │
-│  │  - Profile       │  └─────────────┬──────────────┘       │
-│  └────────┬─────────┘                │                      │
-│           │                          ▼                      │
-│           │         ┌────────────────────────────┐          │
-│           └────────►│     PermissionGrain        │          │
-│                     │  - CRUD Permission         │          │
-│                     └────────────────────────────┘          │
-└─────────────────────────────────────────────────────────────┘
-            │
-            ▼
+│  │    UserGrain    │  │       RoleGrain        │       │
+│  │  - Register   │  │  - CRUD Role           │       │
+│  │  - Login     │  │  - Assign Permissions │       │
+│  │  - Password  │  │  - Check Permission  │       │
+│  │  - Profile   │  └──────────┬───────────┘       │
+│  │  - Roles    │            │                  │
+│  └───────────┼──────────┴──────────────────┐      │
+│             │         ┌─────────────────────┐      │
+│             └────────►│  PermissionGrain   │      │
+│                      │  - CRUD Permission    │      │
+│                      └─────────────────────┘      │
+└──────────────────────────────────────────────┘
+                      │
+                      ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                   Repository Layer                          │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │              IRepository<TKey>                       │   │
-│  │  - UserData / RoleData / PermissionData              │   │
-│  │  - UserRoleData / RolePermissionData                 │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+│  ┌──────────────────────────────────────────────┐       │
+│  │           IRepository<TKey>                 │       │
+│  │  - UserData / RoleData / PermissionData   │       │
+│  │  - UserRoleData / RolePermissionData   │       │
+│  └──────────────────────────────────────────┘       │
+└─────────────────────────────────────────────────────┘
 ```
 
 ## 快速开始
+
+### 0. JSON 约定
+
+所有 API 请求和响应使用 **snake_case** 命名策略：
+
+```json
+{
+  "account": "admin",
+  "password": "Admin@123456",
+  "is_active": true,
+  "access_token": "eyJ..."
+}
+```
 
 ### 1. 数据库配置
 
@@ -112,23 +130,23 @@ CREATE DATABASE users;
 
 Silo 启动时自动初始化以下数据：
 
-#### 权限 (13 个)
-| 权限代码 | 名称 | 描述 |
-|---------|------|------|
-| `users.view` | 查看用户 | 查看用户列表和详情 |
-| `users.create` | 创建用户 | 创建新用户 |
-| `users.update` | 更新用户 | 编辑用户信息 |
-| `users.delete` | 删除用户 | 删除用户 |
-| `users.assign_role` | 分配用户角色 | 为用户分配角色 |
-| `roles.view` | 查看角色 | 查看角色列表 |
-| `roles.create` | 创建角色 | 创建新角色 |
-| `roles.update` | 更新角色 | 编辑角色信息 |
-| `roles.delete` | 删除角色 | 删除角色 |
-| `roles.assign_permission` | 分配角色权限 | 为角色分配权限 |
-| `permissions.view` | 查看权限 | 查看权限列表 |
-| `permissions.create` | 创建权限 | 创建新权限 |
-| `permissions.update` | 更新权限 | 编辑权限信息 |
-| `permissions.delete` | 删除权限 | 删除权限 |
+#### 权限 (14 个)
+| 权限代码 | 名称 | 分类 | 描述 |
+|---------|------|------|------|
+| `users.view` | 查看用户 | 用户管理 | 查看用户列表 |
+| `users.create` | 创建用户 | 用户管理 | 创建新用户 |
+| `users.update` | 编辑用户 | 用户管理 | 编辑用户信息 |
+| `users.delete` | 删除用户 | 用户管理 | 删除用户 |
+| `users.assign_role` | 分配角色 | 用户管理 | 为用户分配角色 |
+| `roles.view` | 查看角色 | 角色管理 | 查看角色列表 |
+| `roles.create` | 创建角色 | 角色管理 | 创建新角色 |
+| `roles.update` | 编辑角色 | 角色管理 | 编辑角色信息 |
+| `roles.delete` | 删除角色 | 角色管理 | 删除角色 |
+| `roles.assign_permission` | 分配权限 | 角色管理 | 为角色分配权限 |
+| `permissions.view` | 查看权限 | 权限管理 | 查看权限列表 |
+| `permissions.create` | 创建权限 | 权限管理 | 创建新权限 |
+| `permissions.update` | 编辑权限 | 权限管理 | 编辑权限信息 |
+| `permissions.delete` | 删除权限 | 权限管理 | 删除权限 |
 
 #### 角色 (1 个)
 - **Admin**: 系统管理员角色，拥有所有权限
@@ -157,11 +175,21 @@ Authorization: Bearer <token>
 | POST | `/api/account/login` | 用户登录 | 无 |
 | POST | `/api/account/refresh` | 刷新 Token | 无 |
 
+#### 当前用户接口
+
+| 方法 | 路径 | 描述 | 权限 |
+|------|------|------|------|
+| GET | `/api/current-user` | 获取当前用户 | `[Authorize]` |
+| PUT | `/api/current-user` | 更新当前用户资料 | `[Authorize]` |
+| POST | `/api/current-user/change-password` | 修改密码 | `[Authorize]` |
+| GET | `/api/current-user/roles` | 获取当前用户角色 | `[Authorize]` |
+| GET | `/api/current-user/permissions` | 获取当前用户权限 | `[Authorize]` |
+| GET | `/api/current-user/has-permission/{permission}` | 检查权限 | `[Authorize]` |
+
 ### 用户接口
 
 | 方法 | 路径 | 描述 | 权限 |
 |------|------|------|------|
-| GET | `/api/user/current` | 获取当前用户 | `[Authorize]` |
 | GET | `/api/user/{id}` | 获取用户 | `users.view` |
 | GET | `/api/user` | 分页查询用户 | `users.view` |
 | POST | `/api/user` | 创建用户 | `users.create` |
@@ -213,6 +241,78 @@ curl -X POST http://localhost:5000/api/account/register \
 curl -X POST http://localhost:5000/api/account/login \
   -H "Content-Type: application/json" \
   -d '{
+    "account": "admin",
+    "password": "Admin@123456"
+  }'
+```
+
+#### 刷新 Token
+```bash
+curl -X POST http://localhost:5000/api/account/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refresh_token": "your-refresh-token"
+  }'
+```
+
+#### 获取当前用户信息
+```bash
+curl -X GET http://localhost:5000/api/current-user \
+  -H "Authorization: Bearer <token>"
+```
+
+#### 修改密码
+```bash
+curl -X POST http://localhost:5000/api/current-user/change-password \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "old_password": "OldPassword@123",
+    "new_password": "NewPassword@123"
+  }'
+```
+
+#### 创建角色
+```bash
+curl -X POST http://localhost:5000/api/role \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "CustomRole",
+    "description": "Custom role",
+    "priority": 100,
+    "is_active": true
+  }'
+```
+
+#### 更新用户状态 (启用/禁用)
+```bash
+# 禁用用户
+curl -X PATCH http://localhost:5000/api/user/{userId}/status \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"is_enabled": false}'
+
+# 启用用户
+curl -X PATCH http://localhost:5000/api/user/{userId}/status \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{"is_enabled": true}'
+```
+
+#### 分配角色权限
+```bash
+curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '[guid1, guid2, guid3]'
+```
+
+#### 用户登录
+```bash
+curl -X POST http://localhost:5000/api/account/login \
+  -H "Content-Type: application/json" \
+  -d '{
     "name": "admin",
     "password": "Admin@123456"
   }'
@@ -227,6 +327,23 @@ curl -X POST http://localhost:5000/api/account/refresh \
   }'
 ```
 
+#### 获取当前用户信息
+```bash
+curl -X GET http://localhost:5000/api/current-user \
+  -H "Authorization: Bearer <token>"
+```
+
+#### 修改密码
+```bash
+curl -X POST http://localhost:5000/api/current-user/change-password \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "oldPassword": "OldPassword@123",
+    "newPassword": "NewPassword@123"
+  }'
+```
+
 #### 创建角色
 ```bash
 curl -X POST http://localhost:5000/api/role \
@@ -234,7 +351,9 @@ curl -X POST http://localhost:5000/api/role \
   -H "Content-Type: application/json" \
   -d '{
     "name": "CustomRole",
-    "description": "Custom role"
+    "description": "Custom role",
+    "priority": 100,
+    "isActive": true
   }'
 ```
 
@@ -261,10 +380,9 @@ curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
   -d '[guid1, guid2, guid3]'
 ```
 
-## 响应格式
+### 响应格式
 
-所有 API 返回统一的响应格式：
-
+成功响应 (snake_case):
 ```json
 {
   "code": "success",
@@ -273,7 +391,7 @@ curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
 }
 ```
 
-失败响应：
+失败响应:
 ```json
 {
   "code": "error_code",
@@ -288,11 +406,14 @@ curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
 |------|------|------|
 | Id | GUID | 主键 |
 | Account | string | 账户名 (唯一) |
-| PasswordHash | string | 密码哈希 |
+| Password | string | 密码哈希 (Argon2) |
+| SecretKey | string | 密钥 |
 | Name | string | 姓名 |
 | Email | string | 邮箱 |
 | PhoneNumber | string | 手机号 |
 | Avatar | string | 头像 URL |
+| CreatorId | GUID? | 创建者 ID |
+| LastModifierId | GUID? | 最后修改者 ID |
 | IsActive | bool | 是否激活 |
 | IsDeleted | bool | 是否删除 |
 | CreationTime | DateTime | 创建时间 |
@@ -324,6 +445,7 @@ curl -X POST http://localhost:5000/api/role/{roleId}/permissions \
 | Category | string | 分类 |
 | Type | PermissionType | 类型 (Operation/Menu/Button/Api) |
 | IsActive | bool | 是否激活 |
+| CreationTime | DateTime | 创建时间 |
 | Roles | List<RoleData> | 关联角色 |
 
 ### UserRoleData (用户角色关联)
@@ -371,9 +493,9 @@ RefreshToken 使用 JWT 格式，包含：
 {
   "success": true,
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expiresAt": "2024-01-01T13:00:00Z",
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expires_at": "2024-01-01T13:00:00Z",
     "user": {
       "id": "user-guid",
       "account": "username",
@@ -455,13 +577,12 @@ modules/Users/
 │   │   ├── Users/
 │   │   │   └── UserData.cs
 │   │   ├── Roles/
-│   │   │   └── RoleData.cs
+│   │   │   ├── RoleData.cs
+│   │   │   └── RolePermissionData.cs
 │   │   ├── Permissions/
 │   │   │   └── PermissionData.cs
-│   │   ├── UserRoles/
-│   │   │   └── UserRoleData.cs
-│   │   └── RolePermissions/
-│   │       └── RolePermissionData.cs
+│   │   └── UserRoles/
+│   │       └── UserRoleData.cs
 │   │
 │   ├── Stargazer.Orleans.Users.Grains.Abstractions/
 │   │   ├── PageResult.cs
@@ -481,6 +602,7 @@ modules/Users/
 │   │   │       ├── CreateOrUpdateUserInputDto.cs
 │   │   │       ├── AssignRolesInputDto.cs
 │   │   │       └── UpdateUserStatusInputDto.cs
+│   │   │       └── UpdateProfileInputDto.cs
 │   │   └── Roles/
 │   │       ├── IRoleGrain.cs
 │   │       ├── IPermissionGrain.cs
@@ -492,17 +614,19 @@ modules/Users/
 │   ├── Stargazer.Orleans.Users.Grains/
 │   │   ├── MapperProfile.cs
 │   │   ├── Grains/
-│   │   │   ├── UserGrain.cs
-│   │   │   └── UsersSeedDataInitializer.cs  # 种子数据初始化
-│   │   └── Roles/
-│   │       ├── RoleGrain.cs
-│   │       └── PermissionGrain.cs
+│   │   │   └── UserGrain.cs
+│   │   ├── Roles/
+│   │   │   ├── RoleGrain.cs
+│   │   │   └── PermissionGrain.cs
+│   │   └── SeedData/
+│   │       └── UsersSeedDataInitializer.cs
 │   │
 │   ├── Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL/
 │   │   ├── IRepository.cs
 │   │   ├── Repository.cs
 │   │   ├── EntityNotFoundException.cs
 │   │   ├── DbContextModelCreatingExtensions.cs
+│   │   ├── EfDbContext.cs
 │   │   └── EntityFramworkCoreExtensions.cs
 │   │
 │   ├── Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations/
@@ -513,6 +637,7 @@ modules/Users/
 │   └── Stargazer.Orleans.Users.Silo/
 │       ├── Controllers/
 │       │   ├── AccountController.cs
+│       │   ├── CurrentUserController.cs
 │       │   ├── UserController.cs
 │       │   ├── RoleController.cs
 │       │   └── PermissionController.cs
@@ -525,6 +650,7 @@ modules/Users/
 │       │   └── GlobalExceptionMiddleware.cs
 │       ├── OrleansServerExtension.cs
 │       ├── OrleansClientExtension.cs
+│       ├── OrleansOptions.cs
 │       └── Program.cs
 │
 ├── tests/
@@ -598,3 +724,4 @@ RUN_INTEGRATION_TESTS=true dotnet test modules/Users/tests/Stargazer.Orleans.Use
 6. **RefreshToken 格式**: RefreshToken 使用 JWT 格式，可通过 `ValidateToken` 验证
 7. **初始化顺序**: Users 模块需先启动，确保 `Admin` 用户存在，再初始化其他业务模块
 8. **Silo 注册**: 其他模块使用 Users 模块的权限系统时，需先确保 Users Silo 运行
+9. **密码加密**: 密码使用 Argon2 算法加密存储

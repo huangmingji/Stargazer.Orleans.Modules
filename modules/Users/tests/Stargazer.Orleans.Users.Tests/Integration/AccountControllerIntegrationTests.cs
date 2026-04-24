@@ -61,7 +61,7 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
 
         var (success, data, errorCode) = await PostAsync<TokenResponseDto>("api/account/login", new VerifyPasswordInputDto
         {
-            Name = account,
+            Account = account,
             Password = password
         });
 
@@ -83,7 +83,7 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
 
         var (success, data, errorCode) = await PostAsync<TokenResponseDto>("api/account/login", new VerifyPasswordInputDto
         {
-            Name = account,
+            Account = account,
             Password = "WrongPassword"
         });
 
