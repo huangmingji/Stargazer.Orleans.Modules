@@ -8,6 +8,7 @@ import type {
   PageResult,
   RoleData,
   UserListParams,
+  PermissionData,
 } from "./types"
 
 const BASE_URL = process.env.NEXT_PUBLIC_USERS_API_URL || "http://localhost:5000/users"
@@ -18,143 +19,107 @@ function getUsersUrl() {
 }
 
 export async function getUsers(params: UserListParams = {}): Promise<PageResult<UserData>> {
-  const url = getUsersUrl()
+  setApiUrl(BASE_URL)
   const queryParams = new URLSearchParams()
   if (params.keyword) queryParams.set("keyword", params.keyword)
   if (params.page_index) queryParams.set("pageIndex", String(params.page_index))
   if (params.page_size) queryParams.set("pageSize", String(params.page_size))
 
   const query = queryParams.toString()
-  const response = await apiRequest<ApiResponse<PageResult<UserData>>>(
+  const response = await apiRequest<PageResult<UserData>>(
     `/api/user${query ? `?${query}` : ""}`,
     { token: getAccessToken() }
   )
 
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to fetch users")
-  }
-
-  return response.data!
+  return response
 }
 
 export async function getUser(id: string): Promise<UserData> {
-  const url = getUsersUrl()
+  setApiUrl(BASE_URL)
   const response = await apiRequest<ApiResponse<UserData>>(
     `/api/user/${id}`,
     { token: getAccessToken() }
   )
 
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to fetch user")
-  }
-
-  return response.data!
+  return response as unknown as UserData
 }
 
 export async function createUser(data: CreateOrUpdateUserInput): Promise<void> {
-  const url = getUsersUrl()
-  const response = await apiRequest<ApiResponse>(
+  setApiUrl(BASE_URL)
+  await apiRequest<ApiResponse>(
     "/api/user",
     {
       method: "POST",
-      body: JSON.stringify(data),
+      body: data,
       token: getAccessToken(),
     }
   )
-
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to create user")
-  }
 }
 
 export async function updateUser(id: string, data: CreateOrUpdateUserInput): Promise<void> {
-  const url = getUsersUrl()
-  const response = await apiRequest<ApiResponse>(
+  setApiUrl(BASE_URL)
+  await apiRequest<ApiResponse>(
     `/api/user/${id}`,
     {
       method: "PUT",
-      body: JSON.stringify(data),
+      body: data,
       token: getAccessToken(),
     }
   )
-
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to update user")
-  }
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  const url = getUsersUrl()
-  const response = await apiRequest<ApiResponse>(
+  setApiUrl(BASE_URL)
+  await apiRequest<ApiResponse>(
     `/api/user/${id}`,
     {
       method: "DELETE",
       token: getAccessToken(),
     }
   )
-
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to delete user")
-  }
 }
 
 export async function updateUserStatus(id: string, is_enabled: boolean): Promise<void> {
-  const url = getUsersUrl()
-  const input: UpdateUserStatusInput = { is_enabled: is_enabled }
-  const response = await apiRequest<ApiResponse>(
+  setApiUrl(BASE_URL)
+  const input: UpdateUserStatusInput = { is_enabled }
+  await apiRequest<ApiResponse>(
     `/api/user/${id}/status`,
     {
       method: "PATCH",
-      body: JSON.stringify(input),
+      body: input,
       token: getAccessToken(),
     }
   )
-
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to update user status")
-  }
 }
 
 export async function getUserRoles(userId: string): Promise<RoleData[]> {
-  const url = getUsersUrl()
-  const response = await apiRequest<ApiResponse<RoleData[]>>(
+  setApiUrl(BASE_URL)
+  const response = await apiRequest<RoleData[]>(
     `/api/user/${userId}/roles`,
     { token: getAccessToken() }
   )
 
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to fetch user roles")
-  }
-
-  return response.data || []
+  return response
 }
 
 export async function assignUserRoles(userId: string, roleIds: string[]): Promise<void> {
-  const url = getUsersUrl()
-  const response = await apiRequest<ApiResponse>(
+  setApiUrl(BASE_URL)
+  await apiRequest<ApiResponse>(
     `/api/user/${userId}/roles`,
     {
       method: "POST",
-      body: JSON.stringify(roleIds),
+      body: roleIds,
       token: getAccessToken(),
     }
   )
-
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to assign user roles")
-  }
 }
 
-export async function getUserPermissions(userId: string): Promise<string[]> {
-  const url = getUsersUrl()
-  const response = await apiRequest<ApiResponse<string[]>>(
+export async function getUserPermissions(userId: string): Promise<PermissionData[]> {
+  setApiUrl(BASE_URL)
+  const response = await apiRequest<PermissionData[]>(
     `/api/user/${userId}/permissions`,
     { token: getAccessToken() }
   )
 
-  if (response.code !== "success") {
-    throw new Error(response.message || "Failed to fetch user permissions")
-  }
-
-  return response.data || []
+  return response
 }

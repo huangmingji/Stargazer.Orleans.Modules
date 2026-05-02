@@ -32,7 +32,7 @@ export function LoginForm({
     setIsLoading(true)
 
     try {
-      await login({ Name: account, Password: password })
+      await login({ Account: account, Password: password })
       router.push("/dashboard")
     } catch (err) {
       if (err instanceof ApiError) {

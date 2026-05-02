@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { login as loginApi, logout as logoutApi, refreshToken, type UserData } from "@/lib/api"
+import { login as loginApi, logout as logoutApi, refreshToken, getAccessToken, type UserData } from "@/lib/api"
 
 interface AuthContextType {
   user: UserData | null
@@ -25,22 +25,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    refreshToken()
-      .then((res) => {
+    const initAuth = async () => {
+      debugger
+      const token = getAccessToken()
+      if (token) {
+        const res = await refreshToken()
         if (res) {
-          setUser(res.User)
+          setUser(res.user)
         }
-      })
-      .finally(() => {
-        setIsLoading(false)
-      })
+      }
+      setIsLoading(false)
+    }
+    initAuth()
   }, [])
 
   const handleLogin = useCallback(
     async (account: string, password: string) => {
       try {
-        const res = await loginApi({ Name: account, Password: password })
-        setUser(res.User)
+        const res = await loginApi({ Account: account, Password: password })
+        setUser(res.user)
         return { success: true }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Login failed"
