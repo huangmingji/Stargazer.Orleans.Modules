@@ -50,7 +50,7 @@ public class UserGrain(
         var result = Cryptography.PasswordStorage.VerifyPassword(input.Password, userData.Password, userData.SecretKey);
         if (result) return userData.MapToUserDto();
         logger.LogWarning("Login failed: invalid password for account {Account}", input.Account);
-        throw new ArgumentException("account_password_incorrect");
+        throw new ArgumentException("invalid_password");
     }
 
     public async Task<UserDataDto> RegisterAsync(RegisterAccountInputDto input, CancellationToken cancellationToken = default)
