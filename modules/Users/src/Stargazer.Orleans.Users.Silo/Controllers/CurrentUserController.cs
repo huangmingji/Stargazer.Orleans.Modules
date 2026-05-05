@@ -84,16 +84,11 @@ public class CurrentUserController(IClusterClient client, ILogger<CurrentUserCon
         var userId = GetCurrentUserId();
         var userGrain = client.GetGrain<IUserGrain>(0);
 
-        var isCurrentPasswordValid = await userGrain.VerifyPasswordAsync(new VerifyPasswordInputDto
+        await userGrain.VerifyPasswordAsync(new VerifyPasswordInputDto
         {
             Account = (await userGrain.GetUserDataAsync(userId, cancellationToken))?.Account ?? "",
             Password = input.OldPassword
         }, cancellationToken);
-
-        if (!isCurrentPasswordValid)
-        {
-            throw new InvalidOperationException("invalid_password");
-        }
 
         try
         {

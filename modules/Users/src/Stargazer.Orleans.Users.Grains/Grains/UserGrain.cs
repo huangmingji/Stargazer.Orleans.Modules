@@ -37,25 +37,20 @@ public class UserGrain(
         await userRepository.UpdateAsync(userData, cancellationToken);
     }
 
-    public async Task<bool> VerifyPasswordAsync(VerifyPasswordInputDto input, CancellationToken cancellationToken = default)
+    public async Task<UserDataDto> VerifyPasswordAsync(VerifyPasswordInputDto input,
+        CancellationToken cancellationToken = default)
     {
         logger.LogDebug("Verifying password for account {Account}", input.Account);
         var userData = await userRepository.FindAsync(x => x.Account.Equals(input.Account), cancellationToken);
         if (userData is null || !userData.IsActive)
         {
             logger.LogWarning("Login failed: user {Account} not found or inactive", input.Account);
-            return false;
+            throw new KeyNotFoundException ("user_not_found");
         }
         var result = Cryptography.PasswordStorage.VerifyPassword(input.Password, userData.Password, userData.SecretKey);
-        if (result)
-        {
-            logger.LogInformation("User {Account} logged in successfully", input.Account);
-        }
-        else
-        {
-            logger.LogWarning("Login failed: invalid password for account {Account}", input.Account);
-        }
-        return result;
+        if (result) return userData.MapToUserDto();
+        logger.LogWarning("Login failed: invalid password for account {Account}", input.Account);
+        throw new ArgumentException("account_password_incorrect");
     }
 
     public async Task<UserDataDto> RegisterAsync(RegisterAccountInputDto input, CancellationToken cancellationToken = default)

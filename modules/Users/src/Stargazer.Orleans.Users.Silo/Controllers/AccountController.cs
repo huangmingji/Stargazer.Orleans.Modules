@@ -17,39 +17,31 @@ public class AccountController(
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
-    public async Task<TokenResponseDto> LoginAsync([FromBody] VerifyPasswordInputDto input, CancellationToken cancellationToken)
-    { 
+    public async Task<TokenResponseDto> LoginAsync([FromBody] VerifyPasswordInputDto input,
+        CancellationToken cancellationToken)
+    {
         if (!ModelState.IsValid)
         {
             throw new ArgumentException("invalid_input");
         }
-        
+
         var userGrain = client.GetGrain<IUserGrain>(0);
-        if (await userGrain.VerifyPasswordAsync(input, cancellationToken))
+
+        var user = await userGrain.VerifyPasswordAsync(input, cancellationToken);
+        var roles = await userGrain.GetUserRolesAsync(user.Id, cancellationToken);
+        var roleNames = roles.Select(r => r.Name).ToList();
+
+        var (accessToken, refreshToken, expires) = jwtTokenService.GenerateTokens(user.Id, user.Account, roleNames);
+
+        return new TokenResponseDto
         {
-            var user = await userGrain.GetUserDataAsync(input.Account, cancellationToken);
-            if (user == null)
-            {
-                throw new KeyNotFoundException("user_not_found");
-            }
-
-            var roles = await userGrain.GetUserRolesAsync(user.Id, cancellationToken);
-            var roleNames = roles.Select(r => r.Name).ToList();
-            
-            var (accessToken, refreshToken, expires) = jwtTokenService.GenerateTokens(user.Id, user.Account, roleNames);
-
-            return new TokenResponseDto
-            {
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                ExpiresAt = expires,
-                User = user
-            };
-        }
-
-        throw new InvalidOperationException("account_password_incorrect");
+            AccessToken = accessToken,
+            RefreshToken = refreshToken,
+            ExpiresAt = expires,
+            User = user
+        };
     }
-    
+
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]

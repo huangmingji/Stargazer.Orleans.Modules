@@ -9,7 +9,7 @@ public interface IUserGrain : IGrainWithIntegerKey
 {
     Task ChangePasswordAsync(Guid id, ChangePasswordInputDto input, Guid modifierId, CancellationToken cancellationToken = default);
 
-    Task<bool> VerifyPasswordAsync(VerifyPasswordInputDto input, CancellationToken cancellationToken = default);
+    Task<UserDataDto> VerifyPasswordAsync(VerifyPasswordInputDto input, CancellationToken cancellationToken = default);
 
     Task<UserDataDto> RegisterAsync(RegisterAccountInputDto input, CancellationToken cancellationToken = default);
     
