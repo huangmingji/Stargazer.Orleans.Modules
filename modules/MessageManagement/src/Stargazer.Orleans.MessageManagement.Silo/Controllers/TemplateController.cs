@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Stargazer.Orleans.MessageManagement.Domain.Shared;
+using Stargazer.Orleans.MessageManagement.Grains.Abstractions;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates.Dtos;
-using ResponseData = Stargazer.Orleans.MessageManagement.Grains.Abstractions.ResponseData;
 
 namespace Stargazer.Orleans.MessageManagement.Silo.Controllers;
 
@@ -27,33 +27,25 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <returns>创建的模板详情</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.Create}")]
     [HttpPost]
-    public async Task<IActionResult> CreateAsync([FromBody] CreateTemplateInputDto input)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TemplateDto))]
+    public async Task<TemplateDto> CreateAsync([FromBody] CreateTemplateInputDto input)
     {
-        try
+        if (string.IsNullOrWhiteSpace(input.Name))
         {
-            if (string.IsNullOrWhiteSpace(input.Name))
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_name", message: "Template name is required."));
-            }
-
-            if (string.IsNullOrWhiteSpace(input.Code))
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_code", message: "Template code is required."));
-            }
-
-            if (string.IsNullOrWhiteSpace(input.ContentTemplate))
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_content", message: "Content template is required."));
-            }
-
-            var result = await Grain.CreateAsync(input);
-            return Ok(ResponseData.Success(data: result));
+            throw new ArgumentException("invalid_name");
         }
-        catch (Exception ex)
+
+        if (string.IsNullOrWhiteSpace(input.Code))
         {
-            logger.LogError(ex, "Failed to create template");
-            return StatusCode(500, ResponseData.Fail(code: "create_failed", message: ex.Message));
+            throw new ArgumentException("invalid_code");
         }
+
+        if (string.IsNullOrWhiteSpace(input.ContentTemplate))
+        {
+            throw new ArgumentException("invalid_content");
+        }
+
+        return await Grain.CreateAsync(input);
     }
 
     /// <summary>
@@ -63,28 +55,20 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <returns>更新后的模板详情</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.Update}")]
     [HttpPut]
-    public async Task<IActionResult> UpdateAsync([FromBody] UpdateTemplateInputDto input)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TemplateDto))]
+    public async Task<TemplateDto> UpdateAsync([FromBody] UpdateTemplateInputDto input)
     {
-        try
+        if (input.Id == Guid.Empty)
         {
-            if (input.Id == Guid.Empty)
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_id", message: "Template ID is required."));
-            }
-
-            if (string.IsNullOrWhiteSpace(input.Name))
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_name", message: "Template name is required."));
-            }
-
-            var result = await Grain.UpdateAsync(input);
-            return Ok(ResponseData.Success(data: result));
+            throw new ArgumentException("invalid_id");
         }
-        catch (Exception ex)
+
+        if (string.IsNullOrWhiteSpace(input.Name))
         {
-            logger.LogError(ex, "Failed to update template");
-            return StatusCode(500, ResponseData.Fail(code: "update_failed", message: ex.Message));
+            throw new ArgumentException("invalid_name");
         }
+
+        return await Grain.UpdateAsync(input);
     }
 
     /// <summary>
@@ -94,23 +78,16 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <returns>删除结果</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.Delete}")]
     [HttpDelete("{id:guid}")]
-    public async Task<IActionResult> DeleteAsync(Guid id)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
+    public async Task DeleteAsync(Guid id)
     {
         if (await Grain.GetAsync(id) == null)
         {
-            return NotFound();
+            throw new KeyNotFoundException("template_not_found");
         }
 
-        try
-        {
-            await Grain.DeleteAsync(id);
-            return Ok(ResponseData.Success(data: true));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to delete template {Id}", id);
-            return StatusCode(500, ResponseData.Fail(code: "delete_failed", message: ex.Message));
-        }
+        await Grain.DeleteAsync(id);
     }
 
     /// <summary>
@@ -120,24 +97,18 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <returns>模板详情</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetAsync(Guid id)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TemplateDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
+    public async Task<TemplateDto> GetAsync(Guid id)
     {
-        try
+        var result = await Grain.GetAsync(id);
+
+        if (result == null)
         {
-            var result = await Grain.GetAsync(id);
-            
-            if (result == null)
-            {
-                return NotFound(ResponseData.Fail(code: "template_not_found", message: "Template not found."));
-            }
-            
-            return Ok(ResponseData.Success(data: result));
+            throw new KeyNotFoundException("template_not_found");
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get template {Id}", id);
-            return StatusCode(500, ResponseData.Fail(code: "get_failed", message: ex.Message));
-        }
+
+        return result;
     }
 
     /// <summary>
@@ -148,24 +119,18 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <returns>模板详情</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpGet("code/{code}")]
-    public async Task<IActionResult> GetByCodeAsync(string code, [FromQuery] MessageChannel channel)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TemplateDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
+    public async Task<TemplateDto> GetByCodeAsync(string code, [FromQuery] MessageChannel channel)
     {
-        try
+        var result = await Grain.GetByCodeAsync(code, channel);
+
+        if (result == null)
         {
-            var result = await Grain.GetByCodeAsync(code, channel);
-            
-            if (result == null)
-            {
-                return NotFound(ResponseData.Fail(code: "template_not_found", message: "Template not found."));
-            }
-            
-            return Ok(ResponseData.Success(data: result));
+            throw new KeyNotFoundException("template_not_found");
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get template by code {Code}", code);
-            return StatusCode(500, ResponseData.Fail(code: "get_failed", message: ex.Message));
-        }
+
+        return result;
     }
 
     /// <summary>
@@ -175,18 +140,10 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <returns>模板列表</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpGet("channel/{channel}")]
-    public async Task<IActionResult> GetByChannelAsync(MessageChannel channel)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<TemplateDto>))]
+    public async Task<List<TemplateDto>> GetByChannelAsync(MessageChannel channel)
     {
-        try
-        {
-            var results = await Grain.GetByChannelAsync(channel);
-            return Ok(ResponseData.Success(data: results));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get templates by channel {Channel}", channel);
-            return StatusCode(500, ResponseData.Fail(code: "get_failed", message: ex.Message));
-        }
+        return await Grain.GetByChannelAsync(channel);
     }
 
     /// <summary>
@@ -200,23 +157,15 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <returns>分页模板列表</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpGet]
-    public async Task<IActionResult> GetTemplatesAsync(
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PageResult<TemplateDto>))]
+    public async Task<PageResult<TemplateDto>> GetTemplatesAsync(
         [FromQuery] MessageChannel? channel,
         [FromQuery] string? searchText,
         [FromQuery] bool? isActive,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        try
-        {
-            var (items, total) = await Grain.GetTemplatesAsync(channel, searchText, isActive, page, pageSize);
-            return Ok(ResponseData.Success(data: new { Items = items, Total = total, Page = page, PageSize = pageSize }));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get templates");
-            return StatusCode(500, ResponseData.Fail(code: "get_failed", message: ex.Message));
-        }
+        return await Grain.GetTemplatesAsync(channel, searchText, isActive, page, pageSize);
     }
 
     /// <summary>
@@ -227,17 +176,11 @@ public class TemplateController(IClusterClient client, ILogger<TemplateControlle
     /// <returns>渲染后的预览内容</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Templates.View}")]
     [HttpPost("{id:guid}/preview")]
-    public async Task<IActionResult> PreviewAsync(Guid id, [FromBody] Dictionary<string, string>? variables)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseData))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
+    public async Task<ResponseData> PreviewAsync(Guid id, [FromBody] Dictionary<string, string>? variables)
     {
-        try
-        {
-            var result = await Grain.PreviewAsync(id, variables);
-            return Ok(ResponseData.Success(data: result));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to preview template {Id}", id);
-            return StatusCode(500, ResponseData.Fail(code: "preview_failed", message: ex.Message));
-        }
+        var result = await Grain.PreviewAsync(id, variables);
+        return ResponseData.Success(data: result);
     }
 }

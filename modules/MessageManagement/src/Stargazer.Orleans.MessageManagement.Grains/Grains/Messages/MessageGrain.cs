@@ -5,6 +5,7 @@ using Orleans.Concurrency;
 using Stargazer.Orleans.MessageManagement.Domain;
 using Stargazer.Orleans.MessageManagement.Domain.Shared;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
+using Stargazer.Orleans.MessageManagement.Grains.Abstractions;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Dtos;
 using Stargazer.Orleans.MessageManagement.Grains.Configuration;
@@ -169,7 +170,7 @@ public class MessageGrain : Grain, IMessageGrain
         return record != null ? ToDto(record) : null;
     }
 
-    public async Task<(List<MessageRecordDto> Items, int Total)> GetRecordsAsync(
+    public async Task<PageResult<MessageRecordDto>> GetRecordsAsync(
         string? channel = null,
         string? status = null,
         string? receiver = null,
@@ -196,8 +197,11 @@ public class MessageGrain : Grain, IMessageGrain
             pageSize: pageSize,
             orderBy: x => x.CreationTime,
             orderByDescending: true);
-
-        return (result.Items.Select(ToDto).ToList(), result.Total);
+        return new PageResult<MessageRecordDto>()
+        {
+            Total = result.Total,
+            Items = result.Items.Select(ToDto).ToList(),
+        };
     }
 
     public async Task<MessageRecordDto> RetryAsync(Guid id)

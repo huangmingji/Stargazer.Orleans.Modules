@@ -26,7 +26,7 @@ public interface IMessageGrain : IGrainWithIntegerKey
     /// <summary>
     /// 获取消息记录列表
     /// </summary>
-    Task<(List<MessageRecordDto> Items, int Total)> GetRecordsAsync(
+    Task<PageResult<MessageRecordDto>> GetRecordsAsync(
         string? channel = null,
         string? status = null,
         string? receiver = null,

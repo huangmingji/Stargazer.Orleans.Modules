@@ -47,7 +47,7 @@ public interface ITemplateGrain : IGrainWithIntegerKey
     /// <summary>
     /// 获取模板列表
     /// </summary>
-    Task<(List<TemplateDto> Items, int Total)> GetTemplatesAsync(
+    Task<PageResult<TemplateDto>> GetTemplatesAsync(
         MessageChannel? channel = null,
         string? searchText = null,
         bool? isActive = null,

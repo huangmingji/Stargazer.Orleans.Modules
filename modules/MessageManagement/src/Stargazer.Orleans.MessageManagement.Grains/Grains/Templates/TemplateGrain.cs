@@ -1,12 +1,13 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
 using Stargazer.Orleans.MessageManagement.Domain;
 using Stargazer.Orleans.MessageManagement.Domain.Shared;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
+using Stargazer.Orleans.MessageManagement.Grains.Abstractions;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Templates.Dtos;
-using Stargazer.Orleans.MessageManagement.Grains.Configuration;
 
 namespace Stargazer.Orleans.MessageManagement.Grains.Grains.Templates;
 
@@ -14,32 +15,27 @@ namespace Stargazer.Orleans.MessageManagement.Grains.Grains.Templates;
 /// 消息模板 Grain 实现
 /// </summary>
 [StatelessWorker]
-public class TemplateGrain : Grain, ITemplateGrain
+public partial class TemplateGrain : Grain, ITemplateGrain
 {
     private readonly IRepository<MessageTemplate, Guid> _templateRepository;
     private readonly ILogger<TemplateGrain> _logger;
-    private readonly MessageSettings _settings;
 
     public TemplateGrain(
         IRepository<MessageTemplate, Guid> templateRepository,
-        ILogger<TemplateGrain> logger,
-        MessageSettings settings)
+        ILogger<TemplateGrain> logger)
     {
         _templateRepository = templateRepository;
         _logger = logger;
-        _settings = settings;
     }
 
     public async Task<TemplateDto> CreateAsync(CreateTemplateInputDto input)
     {
-        var channel = (MessageChannel)input.Channel;
-
         var existing = await _templateRepository.FindAsync(
-            x => x.Code == input.Code && x.Channel == channel);
+            x => x.Code == input.Code && x.Channel == input.Channel);
 
         if (existing != null)
         {
-            throw new InvalidOperationException($"Template with code '{input.Code}' already exists for channel {input.Channel}");
+            throw new InvalidOperationException("template_code_exists");
         }
 
         var template = new MessageTemplate
@@ -47,7 +43,7 @@ public class TemplateGrain : Grain, ITemplateGrain
             Id = Guid.NewGuid(),
             Name = input.Name,
             Code = input.Code,
-            Channel = channel,
+            Channel = input.Channel,
             SubjectTemplate = input.SubjectTemplate,
             ContentTemplate = input.ContentTemplate,
             Variables = input.Variables != null
@@ -75,7 +71,7 @@ public class TemplateGrain : Grain, ITemplateGrain
         var template = await _templateRepository.FindAsync(input.Id);
         if (template == null)
         {
-            throw new KeyNotFoundException($"Template with id '{input.Id}' not found");
+            throw new KeyNotFoundException("template_not_found");
         }
 
         if (template.Code != input.Code)
@@ -84,7 +80,7 @@ public class TemplateGrain : Grain, ITemplateGrain
                 x => x.Code == input.Code && x.Channel == template.Channel);
             if (existing != null)
             {
-                throw new InvalidOperationException($"Template with code '{input.Code}' already exists");
+                throw new InvalidOperationException("template_code_exists");
             }
         }
 
@@ -123,14 +119,14 @@ public class TemplateGrain : Grain, ITemplateGrain
     public async Task<TemplateDto?> GetByCodeAsync(string code, MessageChannel channel)
     {
         var template = await _templateRepository.FindAsync(
-            x => x.Code == code && x.Channel == (MessageChannel)channel && x.IsActive);
+            x => x.Code == code && x.Channel == channel && x.IsActive);
         return template != null ? ToDto(template) : null;
     }
 
     public async Task<List<TemplateDto>> GetByChannelAsync(MessageChannel channel)
     {
         var templates = await _templateRepository.FindListAsync(
-            x => x.Channel == (MessageChannel)channel && x.IsActive);
+            x => x.Channel == channel && x.IsActive);
         return templates.Select(ToDto).ToList();
     }
 
@@ -139,50 +135,56 @@ public class TemplateGrain : Grain, ITemplateGrain
         var template = await _templateRepository.FindAsync(id);
         if (template == null)
         {
-            throw new KeyNotFoundException($"Template with id '{id}' not found");
+            throw new KeyNotFoundException("template_not_found");
         }
 
-        var content = template.ContentTemplate;
-        if (variables != null)
+        if (variables == null || variables.Count == 0)
         {
-            foreach (var kvp in variables)
-            {
-                content = content.Replace($"{{{{{kvp.Key}}}}}", kvp.Value);
-            }
+            return template.ContentTemplate;
         }
 
-        return content;
+        return VariableRegex().Replace(template.ContentTemplate, match =>
+        {
+            var key = match.Groups["key"].Value;
+            return variables.TryGetValue(key, out var value) ? value : match.Value;
+        });
     }
 
-    public async Task<(List<TemplateDto> Items, int Total)> GetTemplatesAsync(
-        MessageChannel? channel = null,
+    public async Task<PageResult<TemplateDto>> GetTemplatesAsync(MessageChannel? channel = null,
         string? searchText = null,
         bool? isActive = null,
         int page = 1,
         int pageSize = 20)
     {
         var result = await _templateRepository.FindListAsync(
-            x => (channel == null || x.Channel == (MessageChannel)channel) &&
+            x => (channel == null || x.Channel == channel) &&
                  (isActive == null || x.IsActive == isActive) &&
-                 (string.IsNullOrEmpty(searchText) || 
+                 (string.IsNullOrEmpty(searchText) ||
                    x.Name.Contains(searchText) || x.Code.Contains(searchText)),
             pageIndex: page,
             pageSize: pageSize,
             orderByDescending: true);
 
-        return (result.Items.Select(ToDto).ToList(), result.Total);
+        return new PageResult<TemplateDto>
+        {
+            Total = result.Total,
+            Items = result.Items.Select(ToDto).ToList()
+        };
     }
 
-    private static TemplateDto ToDto(MessageTemplate template)
+    private TemplateDto ToDto(MessageTemplate template)
     {
         List<TemplateVariableDto>? variables = null;
-        try
+        if (!string.IsNullOrEmpty(template.Variables))
         {
-            variables = JsonSerializer.Deserialize<List<TemplateVariableDto>>(template.Variables);
-        }
-        catch
-        {
-            // Variables deserialization failed, return null
+            try
+            {
+                variables = JsonSerializer.Deserialize<List<TemplateVariableDto>>(template.Variables);
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize variables for template {TemplateId}", template.Id);
+            }
         }
 
         return new TemplateDto
@@ -203,4 +205,7 @@ public class TemplateGrain : Grain, ITemplateGrain
             LastModifyTime = template.LastModifyTime
         };
     }
+
+    [GeneratedRegex(@"\{\{(?<key>\w+)\}\}")]
+    private static partial Regex VariableRegex();
 }

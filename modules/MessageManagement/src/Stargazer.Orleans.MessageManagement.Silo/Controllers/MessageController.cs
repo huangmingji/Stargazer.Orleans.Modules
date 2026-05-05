@@ -5,7 +5,6 @@ using Stargazer.Orleans.MessageManagement.Grains.Abstractions;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Authorization;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages;
 using Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Dtos;
-using ResponseData = Stargazer.Orleans.MessageManagement.Grains.Abstractions.ResponseData;
 
 namespace Stargazer.Orleans.MessageManagement.Silo.Controllers;
 
@@ -28,29 +27,21 @@ public class MessageController(IClusterClient client, ILogger<MessageController>
     /// <returns>发送结果</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Messages.Send}")]
     [HttpPost("send")]
-    public async Task<IActionResult> SendAsync([FromBody] SendMessageInputDto input)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MessageRecordDto))]
+    public async Task<MessageRecordDto> SendAsync([FromBody] SendMessageInputDto input)
     {
-        try
+        if (string.IsNullOrWhiteSpace(input.Receiver))
         {
-            if (string.IsNullOrWhiteSpace(input.Receiver))
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_receiver", message: "Receiver is required."));
-            }
-
-            if (string.IsNullOrWhiteSpace(input.Content) && string.IsNullOrWhiteSpace(input.TemplateCode))
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_content", message: "Content or TemplateCode is required."));
-            }
-
-            var grain = GetMessageGrain();
-            var result = await grain.SendAsync(input);
-            return Ok(ResponseData.Success(data: result));
+            throw new ArgumentException("invalid_receiver");
         }
-        catch (Exception ex)
+
+        if (string.IsNullOrWhiteSpace(input.Content) && string.IsNullOrWhiteSpace(input.TemplateCode))
         {
-            logger.LogError(ex, "Failed to send message");
-            return StatusCode(500, ResponseData.Fail(code: "send_failed", message: ex.Message));
+            throw new ArgumentException("invalid_content");
         }
+
+        var grain = GetMessageGrain();
+        return await grain.SendAsync(input);
     }
 
     /// <summary>
@@ -60,29 +51,21 @@ public class MessageController(IClusterClient client, ILogger<MessageController>
     /// <returns>批量发送结果</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Messages.Send}")]
     [HttpPost("batch-send")]
-    public async Task<IActionResult> BatchSendAsync([FromBody] BatchSendMessageInputDto input)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<MessageRecordDto>))]
+    public async Task<List<MessageRecordDto>> BatchSendAsync([FromBody] BatchSendMessageInputDto input)
     {
-        try
+        if (input.Receivers == null || input.Receivers.Count == 0)
         {
-            if (input.Receivers == null || input.Receivers.Count == 0)
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_receivers", message: "At least one receiver is required."));
-            }
-
-            if (string.IsNullOrWhiteSpace(input.Content) && string.IsNullOrWhiteSpace(input.TemplateCode))
-            {
-                return BadRequest(ResponseData.Fail(code: "invalid_content", message: "Content or TemplateCode is required."));
-            }
-
-            var grain = GetMessageGrain();
-            var results = await grain.BatchSendAsync(input);
-            return Ok(ResponseData.Success(data: results));
+            throw new ArgumentException("invalid_receivers");
         }
-        catch (Exception ex)
+
+        if (string.IsNullOrWhiteSpace(input.Content) && string.IsNullOrWhiteSpace(input.TemplateCode))
         {
-            logger.LogError(ex, "Failed to batch send messages");
-            return StatusCode(500, ResponseData.Fail(code: "batch_send_failed", message: ex.Message));
+            throw new ArgumentException("invalid_content");
         }
+
+        var grain = GetMessageGrain();
+        return await grain.BatchSendAsync(input);
     }
 
     /// <summary>
@@ -92,25 +75,19 @@ public class MessageController(IClusterClient client, ILogger<MessageController>
     /// <returns>消息记录详情</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Messages.View}")]
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> GetRecordAsync(Guid id)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MessageRecordDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
+    public async Task<MessageRecordDto> GetRecordAsync(Guid id)
     {
-        try
+        var grain = GetMessageGrain();
+        var result = await grain.GetRecordAsync(id);
+
+        if (result == null)
         {
-            var grain = GetMessageGrain();
-            var result = await grain.GetRecordAsync(id);
-            
-            if (result == null)
-            {
-                return NotFound(ResponseData.Fail(code: "record_not_found", message: "Message record not found."));
-            }
-            
-            return Ok(ResponseData.Success(data: result));
+            throw new KeyNotFoundException("record_not_found");
         }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get message record {Id}", id);
-            return StatusCode(500, ResponseData.Fail(code: "get_failed", message: ex.Message));
-        }
+
+        return result;
     }
 
     /// <summary>
@@ -124,30 +101,21 @@ public class MessageController(IClusterClient client, ILogger<MessageController>
     /// <returns>分页消息记录列表</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Messages.View}")]
     [HttpGet]
-    public async Task<IActionResult> GetRecordsAsync(
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PageResult<MessageRecordDto>))]
+    public async Task<PageResult<MessageRecordDto>> GetRecordsAsync(
         [FromQuery] MessageChannel? channel,
         [FromQuery] MessageStatus? status,
         [FromQuery] string? receiver,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20)
     {
-        try
-        {
-            var grain = GetMessageGrain();
-            var (items, total) = await grain.GetRecordsAsync(
-                channel?.ToString(),
-                status?.ToString(),
-                receiver,
-                page,
-                pageSize);
-            
-            return Ok(ResponseData.Success(data: new { Items = items, Total = total, Page = page, PageSize = pageSize }));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to get message records");
-            return StatusCode(500, ResponseData.Fail(code: "get_failed", message: ex.Message));
-        }
+        var grain = GetMessageGrain();
+        return await grain.GetRecordsAsync(
+            channel?.ToString(),
+            status?.ToString(),
+            receiver,
+            page,
+            pageSize);
     }
 
     /// <summary>
@@ -157,19 +125,11 @@ public class MessageController(IClusterClient client, ILogger<MessageController>
     /// <returns>重试结果</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Messages.Retry}")]
     [HttpPost("{id:guid}/retry")]
-    public async Task<IActionResult> RetryAsync(Guid id)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(MessageRecordDto))]
+    public async Task<MessageRecordDto> RetryAsync(Guid id)
     {
-        try
-        {
-            var grain = GetMessageGrain();
-            var result = await grain.RetryAsync(id);
-            return Ok(ResponseData.Success(data: result));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to retry message {Id}", id);
-            return StatusCode(500, ResponseData.Fail(code: "retry_failed", message: ex.Message));
-        }
+        var grain = GetMessageGrain();
+        return await grain.RetryAsync(id);
     }
 
     /// <summary>
@@ -179,24 +139,16 @@ public class MessageController(IClusterClient client, ILogger<MessageController>
     /// <returns>取消结果</returns>
     [Authorize(policy: $"permission:{AuthorizationPermissions.Messages.Cancel}")]
     [HttpPost("{id:guid}/cancel")]
-    public async Task<IActionResult> CancelAsync(Guid id)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
+    public async Task CancelAsync(Guid id)
     {
-        try
+        var grain = GetMessageGrain();
+        var result = await grain.CancelAsync(id);
+
+        if (!result)
         {
-            var grain = GetMessageGrain();
-            var result = await grain.CancelAsync(id);
-            
-            if (!result)
-            {
-                return BadRequest(ResponseData.Fail(code: "cancel_failed", message: "Message cannot be cancelled or not found."));
-            }
-            
-            return Ok(ResponseData.Success(data: true));
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Failed to cancel message {Id}", id);
-            return StatusCode(500, ResponseData.Fail(code: "cancel_failed", message: ex.Message));
+            throw new InvalidOperationException("cancel_failed");
         }
     }
 }

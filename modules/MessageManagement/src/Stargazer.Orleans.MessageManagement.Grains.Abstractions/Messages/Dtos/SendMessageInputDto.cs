@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Stargazer.Orleans.MessageManagement.Domain.Shared;
 
 namespace Stargazer.Orleans.MessageManagement.Grains.Abstractions.Messages.Dtos;
@@ -11,66 +12,66 @@ public class SendMessageInputDto
     /// <summary>
     /// 消息通道
     /// </summary>
-    [Id(0)]
+    [Id(0)] [JsonPropertyName("channel")]
     public MessageChannel Channel { get; set; }
 
     /// <summary>
     /// 接收者（邮箱/手机号/设备Token）
     /// </summary>
-    [Id(1)]
+    [Id(1)] [JsonPropertyName("receiver")]
     public string Receiver { get; set; } = string.Empty;
 
     /// <summary>
     /// 主题（邮件专用）
     /// </summary>
-    [Id(2)]
+    [Id(2)] [JsonPropertyName("subject")]
     public string? Subject { get; set; }
 
     /// <summary>
     /// 消息内容
     /// </summary>
-    [Id(3)]
+    [Id(3)] [JsonPropertyName("content")]
     public string Content { get; set; } = string.Empty;
 
     /// <summary>
     /// 模板代码（可选，用于模板发送）
     /// </summary>
-    [Id(4)]
+    [Id(4)] [JsonPropertyName("template_code")]
     public string? TemplateCode { get; set; }
 
     /// <summary>
     /// 模板变量
     /// </summary>
-    [Id(5)]
+    [Id(5)] [JsonPropertyName("variables")]
     public Dictionary<string, string>? Variables { get; set; }
 
     /// <summary>
     /// 指定Provider（可选）
     /// </summary>
-    [Id(6)]
+    [Id(6)] [JsonPropertyName("provider")]
     public string? Provider { get; set; }
 
     /// <summary>
     /// 定时发送时间（可选）
     /// </summary>
-    [Id(7)]
+    [Id(7)] [JsonPropertyName("scheduled_at")]
     public DateTime? ScheduledAt { get; set; }
 
     /// <summary>
     /// 发送者ID
     /// </summary>
-    [Id(8)]
+    [Id(8)] [JsonPropertyName("sender_id")]
     public Guid? SenderId { get; set; }
 
     /// <summary>
     /// 业务ID
     /// </summary>
-    [Id(9)]
+    [Id(9)] [JsonPropertyName("business_id")]
     public string? BusinessId { get; set; }
 
     /// <summary>
     /// 业务类型
     /// </summary>
-    [Id(10)]
+    [Id(10)] [JsonPropertyName("business_type")]
     public string? BusinessType { get; set; }
 }

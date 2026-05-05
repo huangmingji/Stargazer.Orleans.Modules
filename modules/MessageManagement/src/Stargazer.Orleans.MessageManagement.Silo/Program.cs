@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -11,6 +13,8 @@ using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.MessageManagement.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.MessageManagement.Silo;
 using Stargazer.Orleans.MessageManagement.Silo.Authorization;
+using Stargazer.Orleans.MessageManagement.Silo.Middlewares;
+using Stargazer.Orleans.MessageManagement.Silo.Resources;
 using System.Text;
 using Stargazer.Orleans.Users.Grains.Abstractions.Security;
 
@@ -33,8 +37,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Services.UseEntityFramworkCore(configuration).MigrateDatabase(configuration);
 
 var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? throw new InvalidOperationException("JwtSettings not configured");
-// builder.Services.AddSingleton(jwtSettings);
-// builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+var apiPrefix = configuration.GetSection("Api:Prefix").Get<string>() ?? "api";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -62,6 +65,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPermissionPolicies();
 });
 
+builder.Services.AddSingleton<LocalizationService>();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
@@ -80,14 +85,12 @@ builder.Services.AddOpenApi(options =>
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 
-builder.Services.AddControllers().AddNewtonsoftJson(
-    op =>
+builder.Services.AddControllers()
+    .AddMvcOptions(options =>
     {
-        op.SerializerSettings.ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver();
-        op.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-        op.SerializerSettings.Converters.Add(new Ext.DateTimeJsonConverter());
-        op.SerializerSettings.Converters.Add(new Ext.LongJsonConverter());
-    });
+        options.Conventions.Insert(0, new CentralizedPrefixConvention(apiPrefix));
+    })
+    .AddGlobalExceptionFilter();
 
 var app = builder.Build();
 
@@ -122,7 +125,7 @@ internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvi
                 ["Bearer"] = new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.Http,
-                    Scheme = "bearer", // "bearer" refers to the header name here
+                    Scheme = "bearer",
                     In = ParameterLocation.Header,
                     BearerFormat = "Json Web Token"
                 }
@@ -133,4 +136,21 @@ internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvi
     }
 }
 
-
+internal sealed class CentralizedPrefixConvention(string prefix) : IApplicationModelConvention
+{
+    public void Apply(ApplicationModel application)
+    {
+        foreach (var controller in application.Controllers)
+        {
+            foreach (var selector in controller.Selectors)
+            {
+                if (selector.AttributeRouteModel != null)
+                {
+                    selector.AttributeRouteModel = AttributeRouteModel.CombineAttributeRouteModel(
+                        new AttributeRouteModel(new RouteAttribute(prefix)),
+                        selector.AttributeRouteModel);
+                }
+            }
+        }
+    }
+}
