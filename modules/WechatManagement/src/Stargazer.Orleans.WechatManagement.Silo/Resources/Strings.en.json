@@ -1,0 +1,16 @@
+{
+  "account_not_found": "Account not found",
+  "account_inactive": "Account is not active",
+  "fan_not_found": "Fan not found",
+  "send_failed": "Failed to send message",
+  "message_not_found": "Message not found",
+  "invalid_parameters": "Invalid parameters",
+  "unauthorized": "Unauthorized",
+  "forbidden": "Forbidden",
+  "internal_error": "Internal server error",
+  "wechat_not_configured": "WeChat not configured",
+  "invalid_signature": "Invalid signature",
+  "qr_code_expired": "QR code has expired",
+  "bind_failed": "Failed to bind account",
+  "unbind_failed": "Failed to unbind account"
+}

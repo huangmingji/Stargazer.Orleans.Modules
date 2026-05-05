@@ -1,9 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Orleans;
 using Senparc.Weixin.MP;
 using Senparc.Weixin.MP.Entities.Request;
-using Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.WechatManagement.Grains.Abstractions.Accounts;
 using Stargazer.Orleans.WechatManagement.Silo.Wechat;
 using System.IO;
@@ -29,36 +27,28 @@ public class WechatController(
         [FromQuery] string echostr,
         CancellationToken cancellationToken = default)
     {
-        try
+        var wechatAccountGrain = client.GetGrain<IWechatAccountGrain>(0);
+        var account = await wechatAccountGrain.GetAccountAsync(accountId, cancellationToken);
+
+        if (account == null || !account.IsActive)
         {
-            var wechatAccountGrain = client.GetGrain<IWechatAccountGrain>(0);
-            var account = await wechatAccountGrain.GetAccountAsync(accountId, cancellationToken);
-
-            if (account == null || !account.IsActive)
-            {
-                return NotFound();
-            }
-
-            if (!string.IsNullOrEmpty(echostr))
-            {
-                if (CheckSignature(signature, timestamp, nonce, account.Token))
-                {
-                    return Content(echostr);
-                }
-                return BadRequest();
-            }
-
-            return Ok();
+            throw new KeyNotFoundException("account_not_found");
         }
-        catch (Exception ex)
+
+        if (!string.IsNullOrEmpty(echostr))
         {
-            logger.LogError(ex, "Error in WeChat callback");
-            return StatusCode(500);
+            if (CheckSignature(signature, timestamp, nonce, account.Token))
+            {
+                return Content(echostr);
+            }
+            throw new UnauthorizedAccessException("invalid_signature");
         }
+
+        return Ok();
     }
 
     [HttpPost("callback")]
-    public async Task<IActionResult> ProcessMessage(
+    public async Task ProcessMessage(
         Guid accountId,
         [FromQuery] string signature,
         [FromQuery] string timestamp,
@@ -66,78 +56,61 @@ public class WechatController(
         [FromQuery] string msg_signature,
         CancellationToken cancellationToken = default)
     {
-        try
+        var wechatAccountGrain = client.GetGrain<IWechatAccountGrain>(0);
+        var account = await wechatAccountGrain.GetAccountAsync(accountId, cancellationToken);
+
+        if (account == null || !account.IsActive)
         {
-            var wechatAccountGrain = client.GetGrain<IWechatAccountGrain>(0);
-            var account = await wechatAccountGrain.GetAccountAsync(accountId, cancellationToken);
-
-            if (account == null || !account.IsActive)
-            {
-                return BadRequest("Account not found or inactive");
-            }
-
-            using var reader = new StreamReader(Request.Body, Encoding.UTF8);
-            var xmlContent = await reader.ReadToEndAsync(cancellationToken);
-
-            if (string.IsNullOrEmpty(xmlContent))
-            {
-                return BadRequest("Empty message body");
-            }
-
-            var postModel = new PostModel
-            {
-                Token = account.Token,
-                EncodingAESKey = account.EncodingAESKey,
-                AppId = account.AppId,
-                Timestamp = timestamp,
-                Nonce = nonce,
-                Signature = signature,
-                Msg_Signature = msg_signature
-            };
-
-            var clusterClient = serviceProvider.GetRequiredService<IClusterClient>();
-            var messageLogger = serviceProvider.GetRequiredService<ILogger<CustomMessageHandler>>();
-
-            var messageHandler = new CustomMessageHandler(
-                new MemoryStream(Encoding.UTF8.GetBytes(xmlContent)),
-                postModel,
-                clusterClient,
-                messageLogger,
-                0,
-                false);
-
-            await messageHandler.ExecuteAsync(cancellationToken);
-            return Ok();
+            throw new KeyNotFoundException("account_not_found");
         }
-        catch (Exception ex)
+
+        using var reader = new StreamReader(Request.Body, Encoding.UTF8);
+        var xmlContent = await reader.ReadToEndAsync(cancellationToken);
+
+        if (string.IsNullOrEmpty(xmlContent))
         {
-            logger.LogError(ex, "Error processing WeChat message");
-            return StatusCode(500);
+            throw new ArgumentException("empty_message_body");
         }
+
+        var postModel = new PostModel
+        {
+            Token = account.Token,
+            EncodingAESKey = account.EncodingAESKey,
+            AppId = account.AppId,
+            Timestamp = timestamp,
+            Nonce = nonce,
+            Signature = signature,
+            Msg_Signature = msg_signature
+        };
+
+        var clusterClient = serviceProvider.GetRequiredService<IClusterClient>();
+        var messageLogger = serviceProvider.GetRequiredService<ILogger<CustomMessageHandler>>();
+
+        var messageHandler = new CustomMessageHandler(
+            new MemoryStream(Encoding.UTF8.GetBytes(xmlContent)),
+            postModel,
+            clusterClient,
+            messageLogger,
+            0,
+            false);
+
+        await messageHandler.ExecuteAsync(cancellationToken);
     }
 
     [HttpPost("send")]
-    public async Task<IActionResult> SendMessage(
+    public async Task<object> SendMessage(
         Guid accountId,
         [FromBody] SendMessageRequest request)
     {
-        try
-        {
-            var accountGrain = client.GetGrain<IWechatAccountGrain>(0);
-            var account = await accountGrain.GetAccountAsync(accountId);
-            
-            if (account == null)
-            {
-                return NotFound("Account not found");
-            }
+        var accountGrain = client.GetGrain<IWechatAccountGrain>(0);
+        var account = await accountGrain.GetAccountAsync(accountId);
 
-            return Ok(new { success = true, message = "Message queued for sending" });
-        }
-        catch (Exception ex)
+        if (account == null)
         {
-            logger.LogError(ex, "Error sending WeChat message");
-            return StatusCode(500, new { error = ex.Message });
+            throw new KeyNotFoundException("account_not_found");
         }
+
+        return new { success = true, message = "Message queued for sending" };
     }
 
     private static bool CheckSignature(string signature, string timestamp, string nonce, string token)

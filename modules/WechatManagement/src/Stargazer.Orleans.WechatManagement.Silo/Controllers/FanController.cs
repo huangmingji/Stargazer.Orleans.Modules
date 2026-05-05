@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Stargazer.Orleans.WechatManagement.Grains.Abstractions;
 using Stargazer.Orleans.WechatManagement.Grains.Abstractions.Users;
+using Stargazer.Orleans.WechatManagement.Grains.Abstractions.Users.Dtos;
 using Stargazer.Orleans.WechatManagement.Silo.Authorization;
 
 namespace Stargazer.Orleans.WechatManagement.Silo.Controllers;
@@ -14,7 +14,7 @@ public class FanController(IClusterClient client, ILogger<FanController> logger)
 {
     [HttpGet]
     [Authorize(policy: WechatPolicyNames.ViewFans)]
-    public async Task<IActionResult> GetFans(
+    public async Task<object> GetFans(
         Guid accountId,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 20,
@@ -24,51 +24,40 @@ public class FanController(IClusterClient client, ILogger<FanController> logger)
         var grain = client.GetGrain<IWechatUserGrain>(0);
         var (items, total) = await grain.GetFansAsync(accountId, page, pageSize, subscribeStatus, cancellationToken);
 
-        return Ok(new
+        return new
         {
-            Total = total,
-            Page = page,
-            PageSize = pageSize,
-            Items = items
-        });
+            total = total,
+            page = page,
+            pageSize = pageSize,
+            items = items
+        };
     }
 
     [HttpGet("{openId}")]
     [Authorize(policy: WechatPolicyNames.ViewFans)]
-    public async Task<IActionResult> GetFan(string openId, Guid accountId, CancellationToken cancellationToken = default)
+    public async Task<WechatUserDto> GetFan(string openId, Guid accountId, CancellationToken cancellationToken = default)
     {
         var grain = client.GetGrain<IWechatUserGrain>(0);
         var fan = await grain.GetUserByOpenIdAsync(accountId, openId, cancellationToken);
-
-        if (fan == null)
-        {
-            return NotFound(ResponseData.Fail("fan_not_found", "Fan not found."));
-        }
-
-        return Ok(fan);
+        return fan ?? throw new KeyNotFoundException("fan_not_found");
     }
 
     [HttpPut("{openId}")]
     [Authorize(policy: WechatPolicyNames.UpdateFans)]
-    public async Task<IActionResult> UpdateFan(string openId, Guid accountId, [FromBody] UpdateFanInput input, CancellationToken cancellationToken = default)
+    public async Task<object> UpdateFan(string openId, Guid accountId, [FromBody] UpdateFanInput input, CancellationToken cancellationToken = default)
     {
         var grain = client.GetGrain<IWechatUserGrain>(0);
-        
-        var existingFan = await grain.GetUserByOpenIdAsync(accountId, openId, cancellationToken);
-        if (existingFan == null)
-        {
-            return NotFound(ResponseData.Fail("fan_not_found", "Fan not found."));
-        }
 
-        var updateInput = new Grains.Abstractions.Users.Dtos.UpdateWechatUserInputDto
+        var existingFan = await grain.GetUserByOpenIdAsync(accountId, openId, cancellationToken);
+        if (existingFan == null) throw new KeyNotFoundException("fan_not_found");
+
+        var updateInput = new UpdateWechatUserInputDto
         {
             Remark = input.Remark,
             GroupId = input.GroupId
         };
 
-        var result = await grain.UpdateUserAsync(existingFan.Id, updateInput, cancellationToken);
-
-        return Ok(result);
+        return await grain.UpdateUserAsync(existingFan.Id, updateInput, cancellationToken);
     }
 }
 

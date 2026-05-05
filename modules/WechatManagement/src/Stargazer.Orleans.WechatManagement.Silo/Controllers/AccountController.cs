@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Orleans;
-using Stargazer.Orleans.WechatManagement.Grains.Abstractions;
 using Stargazer.Orleans.WechatManagement.Grains.Abstractions.Accounts;
 using Stargazer.Orleans.WechatManagement.Grains.Abstractions.Accounts.Dtos;
 using Stargazer.Orleans.WechatManagement.Grains.Abstractions.Authorization;
@@ -17,64 +16,45 @@ public class AccountController(IClusterClient client, ILogger<AccountController>
 {
     [HttpGet]
     [Authorize(policy: WechatPolicyNames.ViewAccounts)]
-    public async Task<IActionResult> GetAccounts(CancellationToken cancellationToken = default)
+    public async Task<List<WechatAccountDto>> GetAccounts(CancellationToken cancellationToken = default)
     {
         var grain = client.GetGrain<IWechatAccountGrain>(0);
-        var accounts = await grain.GetAllAccountsAsync(cancellationToken);
-        return Ok(accounts);
+        return await grain.GetAllAccountsAsync(cancellationToken);
     }
 
     [HttpGet("{id:guid}")]
     [Authorize(policy: WechatPolicyNames.ViewAccounts)]
-    public async Task<IActionResult> GetAccount(Guid id, CancellationToken cancellationToken = default)
+    public async Task<WechatAccountDto> GetAccount(Guid id, CancellationToken cancellationToken = default)
     {
         var grain = client.GetGrain<IWechatAccountGrain>(0);
         var account = await grain.GetAccountAsync(id, cancellationToken);
-
-        if (account == null)
-        {
-            return NotFound(ResponseData.Fail("account_not_found", "Account not found."));
-        }
-
-        return Ok(account);
+        return account ?? throw new KeyNotFoundException("account_not_found");
     }
 
     [HttpPost]
     [Authorize(policy: WechatPolicyNames.CreateAccounts)]
-    public async Task<IActionResult> CreateAccount([FromBody] CreateWechatAccountInputDto input, CancellationToken cancellationToken = default)
+    public async Task<WechatAccountDto> CreateAccount([FromBody] CreateWechatAccountInputDto input, CancellationToken cancellationToken = default)
     {
         var grain = client.GetGrain<IWechatAccountGrain>(0);
-        var account = await grain.CreateAccountAsync(input, cancellationToken);
-        return Ok(account);
+        return await grain.CreateAccountAsync(input, cancellationToken);
     }
 
     [HttpPut("{id:guid}")]
     [Authorize(policy: WechatPolicyNames.UpdateAccounts)]
-    public async Task<IActionResult> UpdateAccount(Guid id, [FromBody] UpdateWechatAccountInputDto input, CancellationToken cancellationToken = default)
+    public async Task<WechatAccountDto?> UpdateAccount(Guid id, [FromBody] UpdateWechatAccountInputDto input, CancellationToken cancellationToken = default)
     {
         var grain = client.GetGrain<IWechatAccountGrain>(0);
         var account = await grain.UpdateAccountAsync(id, input, cancellationToken);
-
-        if (account == null)
-        {
-            return NotFound(ResponseData.Fail("account_not_found", "Account not found."));
-        }
-
-        return Ok(account);
+        if (account == null) throw new KeyNotFoundException("account_not_found");
+        return account;
     }
 
     [HttpDelete("{id:guid}")]
     [Authorize(policy: WechatPolicyNames.DeleteAccounts)]
-    public async Task<IActionResult> DeleteAccount(Guid id, CancellationToken cancellationToken = default)
+    public async Task DeleteAccount(Guid id, CancellationToken cancellationToken = default)
     {
         var grain = client.GetGrain<IWechatAccountGrain>(0);
         var result = await grain.DeleteAccountAsync(id, cancellationToken);
-
-        if (!result)
-        {
-            return NotFound(ResponseData.Fail("account_not_found", "Account not found."));
-        }
-
-        return Ok();
+        if (!result) throw new KeyNotFoundException("account_not_found");
     }
 }

@@ -8,6 +8,8 @@ using Stargazer.Common.Extend;
 using Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.WechatManagement.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.WechatManagement.Silo;
+using Stargazer.Orleans.WechatManagement.Silo.Middlewares;
+using Stargazer.Orleans.WechatManagement.Silo.Resources;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -43,14 +45,11 @@ builder.Services.AddOpenApi(options =>
     });
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
-builder.Services.AddControllers().AddNewtonsoftJson(
-    op =>
-    {
-        op.SerializerSettings.ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver();
-        op.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-        op.SerializerSettings.Converters.Add(new Ext.DateTimeJsonConverter());
-        op.SerializerSettings.Converters.Add(new Ext.LongJsonConverter());
-    });
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<GlobalExceptionFilter>();
+});
+builder.Services.AddSingleton<LocalizationService>();
 
 var app = builder.Build();
 
@@ -93,5 +92,3 @@ internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvi
         }
     }
 }
-
-

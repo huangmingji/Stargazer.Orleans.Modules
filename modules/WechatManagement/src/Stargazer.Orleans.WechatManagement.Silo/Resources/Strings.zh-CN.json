@@ -1,0 +1,16 @@
+{
+  "account_not_found": "账号不存在",
+  "account_inactive": "账号未激活",
+  "fan_not_found": "粉丝不存在",
+  "send_failed": "消息发送失败",
+  "message_not_found": "消息不存在",
+  "invalid_parameters": "参数无效",
+  "unauthorized": "未授权",
+  "forbidden": "禁止访问",
+  "internal_error": "服务器内部错误",
+  "wechat_not_configured": "微信未配置",
+  "invalid_signature": "签名无效",
+  "qr_code_expired": "二维码已过期",
+  "bind_failed": "绑定失败",
+  "unbind_failed": "解绑失败"
+}
