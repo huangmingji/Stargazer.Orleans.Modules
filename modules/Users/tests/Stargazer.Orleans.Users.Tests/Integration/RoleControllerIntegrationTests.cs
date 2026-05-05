@@ -15,7 +15,7 @@ public class RoleControllerIntegrationTests : IntegrationTestBase
     public async Task GetRoles_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await GetAsync<object>("api/role");
+        var (success, _, _) = await GetAsync<object>("users/api/role");
         
         Assert.False(success);
     }
@@ -23,17 +23,16 @@ public class RoleControllerIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task CreateRole_WithValidInput_ReturnsSuccess()
     {
-        var account = $"role_admin_{Guid.NewGuid():N}";
-        var (_, data, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, data, _) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto()
         {
-            Account = account,
-            Password = "Test@123456"
+            Account = "admin",
+            Password = "Admin@123456"
         });
 
         SetAuthToken(data!.AccessToken);
 
         var roleName = $"TestRole_{Guid.NewGuid():N}";
-        var (success, roleData, _) = await PostAsync<RoleDataDto>("api/role", new CreateOrUpdateRoleInputDto
+        var (success, roleData, _) = await PostAsync<RoleDataDto>("users/api/role", new CreateOrUpdateRoleInputDto
         {
             Name = roleName,
             Description = "Test role description"
@@ -47,23 +46,22 @@ public class RoleControllerIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetRole_ById_ReturnsRole()
     {
-        var account = $"get_role_{Guid.NewGuid():N}";
-        var (_, registerData, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, data, _) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto()
         {
-            Account = account,
-            Password = "Test@123456"
+            Account = "admin",
+            Password = "Admin@123456"
         });
 
-        SetAuthToken(registerData!.AccessToken);
+        SetAuthToken(data!.AccessToken);
 
         var roleName = $"GetRole_{Guid.NewGuid():N}";
-        var (_, createdRole, _) = await PostAsync<RoleDataDto>("api/role", new CreateOrUpdateRoleInputDto
+        var (_, createdRole, _) = await PostAsync<RoleDataDto>("users/api/role", new CreateOrUpdateRoleInputDto
         {
             Name = roleName,
             Description = "Test role"
         });
 
-        var (success, roleData, _) = await GetAsync<RoleDataDto>($"api/role/{createdRole!.Id}");
+        var (success, roleData, _) = await GetAsync<RoleDataDto>($"users/api/role/{createdRole!.Id}");
 
         Assert.True(success);
         Assert.NotNull(roleData);
@@ -73,17 +71,16 @@ public class RoleControllerIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetRole_NotFound_ReturnsError()
     {
-        var account = $"notfound_role_{Guid.NewGuid():N}";
-        var (_, data, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, data, _) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto()
         {
-            Account = account,
-            Password = "Test@123456"
+            Account = "admin",
+            Password = "Admin@123456"
         });
 
         SetAuthToken(data!.AccessToken);
         var nonExistentId = Guid.NewGuid();
 
-        var (success, _, errorCode) = await GetAsync<RoleDataDto>($"api/role/{nonExistentId}");
+        var (success, _, errorCode) = await GetAsync<RoleDataDto>($"users/api/role/{nonExistentId}");
 
         Assert.False(success);
         Assert.Equal("role_not_found", errorCode);
@@ -92,23 +89,22 @@ public class RoleControllerIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task UpdateRole_WithValidInput_ReturnsSuccess()
     {
-        var account = $"update_role_{Guid.NewGuid():N}";
-        var (_, data, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, data, _) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto()
         {
-            Account = account,
-            Password = "Test@123456"
+            Account = "admin",
+            Password = "Admin@123456"
         });
 
         SetAuthToken(data!.AccessToken);
 
         var roleName = $"UpdateRole_{Guid.NewGuid():N}";
-        var (_, createdRole, _) = await PostAsync<RoleDataDto>("api/role", new CreateOrUpdateRoleInputDto
+        var (_, createdRole, _) = await PostAsync<RoleDataDto>("users/api/role", new CreateOrUpdateRoleInputDto
         {
             Name = roleName,
             Description = "Original description"
         });
 
-        var (success, updatedRole, _) = await PutAsync<RoleDataDto>($"api/role/{createdRole!.Id}", new CreateOrUpdateRoleInputDto
+        var (success, updatedRole, _) = await PutAsync<RoleDataDto>($"users/api/role/{createdRole!.Id}", new CreateOrUpdateRoleInputDto
         {
             Name = roleName,
             Description = "Updated description"
@@ -122,23 +118,22 @@ public class RoleControllerIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task DeleteRole_ExistingRole_ReturnsSuccess()
     {
-        var account = $"delete_role_{Guid.NewGuid():N}";
-        var (_, data, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, data, _) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto()
         {
-            Account = account,
-            Password = "Test@123456"
+            Account = "admin",
+            Password = "Admin@123456"
         });
 
         SetAuthToken(data!.AccessToken);
 
         var roleName = $"DeleteRole_{Guid.NewGuid():N}";
-        var (_, createdRole, _) = await PostAsync<RoleDataDto>("api/role", new CreateOrUpdateRoleInputDto
+        var (_, createdRole, _) = await PostAsync<RoleDataDto>("users/api/role", new CreateOrUpdateRoleInputDto
         {
             Name = roleName,
             Description = "To be deleted"
         });
 
-        var (success, _, _) = await DeleteAsync<bool>($"api/role/{createdRole!.Id}");
+        var (success, _, _) = await DeleteAsync<bool>($"users/api/role/{createdRole!.Id}");
 
         Assert.True(success);
     }
@@ -146,23 +141,22 @@ public class RoleControllerIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetRolePermissions_ReturnsPermissions()
     {
-        var account = $"perms_role_{Guid.NewGuid():N}";
-        var (_, data, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, data, _) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto()
         {
-            Account = account,
-            Password = "Test@123456"
+            Account = "admin",
+            Password = "Admin@123456"
         });
 
         SetAuthToken(data!.AccessToken);
 
         var roleName = $"PermsRole_{Guid.NewGuid():N}";
-        var (_, createdRole, _) = await PostAsync<RoleDataDto>("api/role", new CreateOrUpdateRoleInputDto
+        var (_, createdRole, _) = await PostAsync<RoleDataDto>("users/api/role", new CreateOrUpdateRoleInputDto
         {
             Name = roleName,
             Description = "Role with permissions"
         });
 
-        var (success, permissions, _) = await GetAsync<object>($"api/role/{createdRole!.Id}/permissions");
+        var (success, permissions, _) = await GetAsync<object>($"users/api/role/{createdRole!.Id}/permissions");
 
         Assert.True(success);
     }

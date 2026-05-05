@@ -9,10 +9,10 @@ namespace Stargazer.Orleans.Users.Silo.Security;
 
 public interface IJwtTokenService
 {
-    string GenerateAccessToken(Guid userId, string account, IEnumerable<string> roles);
-    string GenerateRefreshToken(Guid userId, string account);
+    (string token, DateTime expires) GenerateAccessToken(Guid userId, string account, IEnumerable<string> roles);
+    (string token, DateTime expires) GenerateRefreshToken(Guid userId, string account);
     ClaimsPrincipal? ValidateToken(string token);
-    (string accessToken, string refreshToken) GenerateTokens(Guid userId, string account, IEnumerable<string> roles);
+    (string accessToken, string refreshToken, DateTime expires) GenerateTokens(Guid userId, string account, IEnumerable<string> roles);
 }
 
 public class JwtTokenService : IJwtTokenService
@@ -38,7 +38,7 @@ public class JwtTokenService : IJwtTokenService
         };
     }
 
-    public string GenerateAccessToken(Guid userId, string account, IEnumerable<string> roles)
+    public (string token, DateTime expires) GenerateAccessToken(Guid userId, string account, IEnumerable<string> roles)
     {
         var claims = new List<Claim>
         {
@@ -53,11 +53,11 @@ public class JwtTokenService : IJwtTokenService
         {
             claims.Add(new Claim(ClaimTypes.Role, role));
         }
-
+        DateTime expires = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes);
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes),
+            Expires = expires,
             Issuer = _settings.Issuer,
             Audience = _settings.Audience,
             SigningCredentials = new SigningCredentials(_securityKey, SecurityAlgorithms.HmacSha256)
@@ -65,10 +65,10 @@ public class JwtTokenService : IJwtTokenService
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+        return (tokenHandler.WriteToken(token), expires);
     }
 
-    public string GenerateRefreshToken(Guid userId, string account)
+    public (string token, DateTime expires) GenerateRefreshToken(Guid userId, string account)
     {
         var claims = new List<Claim>
         {
@@ -78,10 +78,11 @@ public class JwtTokenService : IJwtTokenService
             new("account", account)
         };
 
+        DateTime expires = DateTime.UtcNow.AddDays(_settings.RefreshTokenExpiryDays);
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddDays(_settings.RefreshTokenExpiryDays),
+            Expires = expires,
             Issuer = _settings.Issuer,
             Audience = _settings.Audience,
             SigningCredentials = new SigningCredentials(_securityKey, SecurityAlgorithms.HmacSha256)
@@ -89,7 +90,7 @@ public class JwtTokenService : IJwtTokenService
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        return tokenHandler.WriteToken(token);
+        return (tokenHandler.WriteToken(token), expires);
     }
 
     public ClaimsPrincipal? ValidateToken(string token)
@@ -108,10 +109,10 @@ public class JwtTokenService : IJwtTokenService
         }
     }
 
-    public (string accessToken, string refreshToken) GenerateTokens(Guid userId, string account, IEnumerable<string> roles)
+    public (string accessToken, string refreshToken, DateTime expires) GenerateTokens(Guid userId, string account, IEnumerable<string> roles)
     {
-        var accessToken = GenerateAccessToken(userId, account, roles);
-        var refreshToken = GenerateRefreshToken(userId, account);
-        return (accessToken, refreshToken);
+        var (accessToken, expires) = GenerateAccessToken(userId, account, roles);
+        var (refreshToken, _) = GenerateRefreshToken(userId, account);
+        return (accessToken, refreshToken, expires);
     }
 }

@@ -14,16 +14,16 @@ public class UserControllerIntegrationTests : IntegrationTestBase
 
     private async Task<(Guid UserId, string Token)> CreateUserWithTokenAsync(string? roleName = null)
     {
-        var account = $"user_{Guid.NewGuid():N}";
-        var (_, data, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        string account = "admin";
+        var (_, data, _) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto()
         {
             Account = account,
-            Password = "Test@123456"
+            Password = "Admin@123456"
         });
 
         if (roleName != null)
         {
-            var (_, roleData, _) = await PostAsync<RoleDataDto>("api/role", new CreateOrUpdateRoleInputDto
+            var (_, roleData, _) = await PostAsync<RoleDataDto>("users/api/role", new CreateOrUpdateRoleInputDto
             {
                 Name = roleName,
                 Description = "Test role"
@@ -31,7 +31,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
 
             if (roleData != null)
             {
-                await PostAsync<object>($"api/user/{data!.User.Id}/roles", new List<Guid> { roleData.Id });
+                await PostAsync<object>($"users/api/user/{data!.User.Id}/roles", new List<Guid> { roleData.Id });
             }
         }
 
@@ -44,7 +44,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     public async Task GetCurrentUser_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await GetAsync<object>("api/user/current");
+        var (success, _, _) = await GetAsync<object>("users/api/user/current");
         
         Assert.False(success);
     }
@@ -52,15 +52,15 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task GetCurrentUser_WithValidToken_ReturnsUser()
     {
-        var account = $"current_user_{Guid.NewGuid():N}";
-        var (_, data, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        string account = "admin";
+        var (_, data, _) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto()
         {
             Account = account,
-            Password = "Test@123456"
+            Password = "Admin@123456"
         });
 
         SetAuthToken(data!.AccessToken);
-        var (success, userData, _) = await GetAsync<UserDataDto>("api/current-user");
+        var (success, userData, _) = await GetAsync<UserDataDto>("users/api/current-user");
 
         Assert.True(success);
         Assert.NotNull(userData);
@@ -77,7 +77,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         var (userId, token) = await CreateUserWithTokenAsync();
         SetAuthToken(token);
 
-        var (success, userData, _) = await GetAsync<UserDataDto>($"api/user/{userId}");
+        var (success, userData, _) = await GetAsync<UserDataDto>($"users/api/user/{userId}");
 
         Assert.True(success);
         Assert.NotNull(userData);
@@ -91,7 +91,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         SetAuthToken(token);
         var nonExistentId = Guid.NewGuid();
         
-        var (success, _, errorCode) = await GetAsync<UserDataDto>($"api/user/{nonExistentId}");
+        var (success, _, errorCode) = await GetAsync<UserDataDto>($"users/api/user/{nonExistentId}");
         
         Assert.False(success);
         Assert.Equal("user_not_found", errorCode);
@@ -105,7 +105,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     public async Task GetUsers_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await GetAsync<object>("api/user");
+        var (success, _, _) = await GetAsync<object>("users/api/user");
         
         Assert.False(success);
     }
@@ -116,7 +116,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         var (_, token) = await CreateUserWithTokenAsync();
         SetAuthToken(token);
 
-        var (success, result, _) = await GetAsync<PageResult<UserDataDto>>("api/user");
+        var (success, result, _) = await GetAsync<PageResult<UserDataDto>>("users/api/user");
 
         Assert.True(success);
         Assert.NotNull(result);
@@ -130,13 +130,13 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         SetAuthToken(token);
 
         var account = $"filter_user_{Guid.NewGuid():N}";
-        await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        await PostAsync<TokenResponseDto>("users/api/account/register", new RegisterAccountInputDto
         {
             Account = account,
             Password = "Test@123456"
         });
 
-        var (success, result, _) = await GetAsync<PageResult<UserDataDto>>($"api/user?keyword={account}");
+        var (success, result, _) = await GetAsync<PageResult<UserDataDto>>($"users/api/user?keyword={account}");
 
         Assert.True(success);
         Assert.NotNull(result);
@@ -150,7 +150,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     public async Task CreateUser_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await PostAsync<object>("api/user", new CreateOrUpdateUserInputDto
+        var (success, _, _) = await PostAsync<object>("users/api/user", new CreateOrUpdateUserInputDto
         {
             Account = "new_user",
             Password = "Test@123456",
@@ -169,7 +169,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         var newAccount = $"create_user_{Guid.NewGuid():N}";
         // 随机生成电话号码 
         var phoneNumber = $"1{new Random().Next(100000000, 999999999)}";
-        var (success, _, errorCode) = await PostAsync<object>("api/user", new CreateOrUpdateUserInputDto
+        var (success, _, errorCode) = await PostAsync<object>("users/api/user", new CreateOrUpdateUserInputDto
         {
             Account = newAccount,
             Password = "Test@123456",
@@ -190,7 +190,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     public async Task UpdateUser_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await PutAsync<object>($"api/user/{Guid.NewGuid()}", new CreateOrUpdateUserInputDto
+        var (success, _, _) = await PutAsync<object>($"users/api/user/{Guid.NewGuid()}", new CreateOrUpdateUserInputDto
         {
             Account = "updated_user",
             Password = "Test@123456"
@@ -209,7 +209,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         var newAccount = $"update_user_{Guid.NewGuid():N}";
         // 随机生成电话号码 
         var phoneNumber = $"1{new Random().Next(100000000, 999999999)}";
-        var (success, _, _) = await PutAsync<object>($"api/user/{userId}", new CreateOrUpdateUserInputDto
+        var (success, _, _) = await PutAsync<object>($"users/api/user/{userId}", new CreateOrUpdateUserInputDto
         {
             Account = newAccount,
             Password = "Test@123456",
@@ -230,7 +230,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     public async Task DeleteUser_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await DeleteAsync<object>($"api/user/{Guid.NewGuid()}");
+        var (success, _, _) = await DeleteAsync<object>($"users/api/user/{Guid.NewGuid()}");
         
         Assert.False(success);
     }
@@ -242,13 +242,13 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         SetAuthToken(token);
 
         var newAccount = $"delete_user_{Guid.NewGuid():N}";
-        var (_, registerData, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, registerData, _) = await PostAsync<TokenResponseDto>("users/api/account/register", new RegisterAccountInputDto
         {
             Account = newAccount,
             Password = "Test@123456"
         });
 
-        var (success, _, _) = await DeleteAsync<bool>($"api/user/{registerData!.User.Id}");
+        var (success, _, _) = await DeleteAsync<bool>($"users/api/user/{registerData!.User.Id}");
 
         Assert.True(success);
     }
@@ -259,7 +259,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         var (_, token) = await CreateUserWithTokenAsync();
         SetAuthToken(token);
 
-        var (success, _, errorCode) = await DeleteAsync<bool>($"api/user/{Guid.NewGuid()}");
+        var (success, _, errorCode) = await DeleteAsync<bool>($"users/api/user/{Guid.NewGuid()}");
 
         Assert.False(success);
         Assert.Equal("user_not_found", errorCode);
@@ -273,7 +273,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     public async Task AssignRoles_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await PostAsync<object>($"api/user/{Guid.NewGuid()}/roles", new List<Guid>());
+        var (success, _, _) = await PostAsync<object>($"users/api/user/{Guid.NewGuid()}/roles", new List<Guid>());
         
         Assert.False(success);
     }
@@ -285,13 +285,13 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         SetAuthToken(token);
 
         var roleName = $"assign_role_{Guid.NewGuid():N}";
-        var (_, roleData, _) = await PostAsync<RoleDataDto>("api/role", new CreateOrUpdateRoleInputDto
+        var (_, roleData, _) = await PostAsync<RoleDataDto>("users/api/role", new CreateOrUpdateRoleInputDto
         {
             Name = roleName,
             Description = "Role for assignment"
         });
 
-        var (success, _, _) = await PostAsync<object>($"api/user/{userId}/roles", new List<Guid> { roleData!.Id });
+        var (success, _, _) = await PostAsync<object>($"users/api/user/{userId}/roles", new List<Guid> { roleData!.Id });
 
         Assert.True(success);
     }
@@ -302,7 +302,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         var (_, token) = await CreateUserWithTokenAsync();
         SetAuthToken(token);
 
-        var (success, _, errorCode) = await PostAsync<object>($"api/user/{Guid.NewGuid()}/roles", new List<Guid>());
+        var (success, _, errorCode) = await PostAsync<object>($"users/api/user/{Guid.NewGuid()}/roles", new List<Guid>());
 
         Assert.False(success);
         Assert.Equal("user_not_found", errorCode);
@@ -316,7 +316,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     public async Task GetUserRoles_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await GetAsync<object>($"api/user/{Guid.NewGuid()}/roles");
+        var (success, _, _) = await GetAsync<object>($"users/api/user/{Guid.NewGuid()}/roles");
         
         Assert.False(success);
     }
@@ -327,7 +327,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         var (userId, token) = await CreateUserWithTokenAsync();
         SetAuthToken(token);
 
-        var (success, roles, _) = await GetAsync<object>($"api/user/{userId}/roles");
+        var (success, roles, _) = await GetAsync<object>($"users/api/user/{userId}/roles");
 
         Assert.True(success);
     }
@@ -340,7 +340,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     public async Task GetUserPermissions_WithoutAuth_ReturnsUnauthorized()
     {
         ClearAuthToken();
-        var (success, _, _) = await GetAsync<object>($"api/user/{Guid.NewGuid()}/permissions");
+        var (success, _, _) = await GetAsync<object>($"users/api/user/{Guid.NewGuid()}/permissions");
         
         Assert.False(success);
     }
@@ -351,7 +351,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         var (userId, token) = await CreateUserWithTokenAsync();
         SetAuthToken(token);
 
-        var (success, permissions, _) = await GetAsync<object>($"api/user/{userId}/permissions");
+        var (success, permissions, _) = await GetAsync<object>($"users/api/user/{userId}/permissions");
 
         Assert.True(success);
     }
@@ -365,7 +365,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
     {
         ClearAuthToken();
         var (success, _, _) = await PostAsync<object>(
-            $"api/user/{Guid.NewGuid()}/status", 
+            $"users/api/user/{Guid.NewGuid()}/status", 
             new { isEnabled = false });
         
         Assert.False(success);
@@ -378,14 +378,14 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         SetAuthToken(token);
 
         var newAccount = $"status_user_{Guid.NewGuid():N}";
-        var (_, registerData, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, registerData, _) = await PostAsync<TokenResponseDto>("users/api/account/register", new RegisterAccountInputDto
         {
             Account = newAccount,
             Password = "Test@123456"
         });
 
         var (success, _, errorCode) = await PatchAsync<object>(
-            $"api/user/{registerData!.User.Id}/status", 
+            $"users/api/user/{registerData!.User.Id}/status", 
             new UpdateUserStatusInputDto { IsEnabled = false });
 
         Assert.True(success);
@@ -398,14 +398,14 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         SetAuthToken(token);
 
         var newAccount = $"status_user_{Guid.NewGuid():N}";
-        var (_, registerData, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (_, registerData, _) = await PostAsync<TokenResponseDto>("users/api/account/register", new RegisterAccountInputDto
         {
             Account = newAccount,
             Password = "Test@123456"
         });
 
         var (success, _, errorCode) = await PatchAsync<object>(
-            $"api/user/{registerData!.User.Id}/status", 
+            $"users/api/user/{registerData!.User.Id}/status", 
             new UpdateUserStatusInputDto { IsEnabled = true });
 
         Assert.True(success);
@@ -418,7 +418,7 @@ public class UserControllerIntegrationTests : IntegrationTestBase
         SetAuthToken(token);
 
         var (success, _, errorCode) = await PatchAsync<object>(
-            $"api/user/{Guid.NewGuid()}/status", 
+            $"users/api/user/{Guid.NewGuid()}/status", 
             new UpdateUserStatusInputDto { IsEnabled = false });
 
         Assert.False(success);

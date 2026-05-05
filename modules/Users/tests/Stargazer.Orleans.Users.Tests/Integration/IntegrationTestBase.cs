@@ -5,6 +5,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Newtonsoft.Json;
 using Stargazer.Common.Extend;
+using Stargazer.Orleans.Users.Grains.Abstractions;
 using Xunit;
 using JsonException = System.Text.Json.JsonException;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -127,19 +128,18 @@ public class IntegrationTestBase : IClassFixture<TestWebApplicationFactory>, IAs
             return (false, default, "forbidden");
         }
         
-        if (string.IsNullOrWhiteSpace(content))
+        if (response.StatusCode != HttpStatusCode.OK && string.IsNullOrWhiteSpace(content))
         {
             return (false, default, "empty_response");
         }
 
         if (response.StatusCode == HttpStatusCode.BadRequest || response.StatusCode == HttpStatusCode.NotFound)
         {
-            using var doc = JsonDocument.Parse(content);
-            var root = doc.RootElement;
             string? errorCode = null;
-            if (root.TryGetProperty("code", out var codeElement) && codeElement.ValueKind == JsonValueKind.String)
+            var data = JsonSerializer.Deserialize<ResponseData>(content);
+            if (data != null)
             {
-                errorCode = codeElement.GetString();
+                errorCode = data.Code;
             }
             return (false, default, errorCode);
         }
@@ -151,38 +151,14 @@ public class IntegrationTestBase : IClassFixture<TestWebApplicationFactory>, IAs
 
         try
         {
-            using var doc = JsonDocument.Parse(content);
-            var root = doc.RootElement;
-
-            if (root.ValueKind == JsonValueKind.Array)
-            {
-                return (true, default, null);
-            }
-
-            if (root.ValueKind != JsonValueKind.Object)
-            {
-                return (true, default, null);
-            }
-
             var success = response.StatusCode == HttpStatusCode.OK;
-            string? errorCode = null;
-            if (root.TryGetProperty("code", out var codeElement) && codeElement.ValueKind == JsonValueKind.String)
-            {
-                errorCode = codeElement.GetString();
-            }
-
             T? data = default;
-            if (success)
+            if (success && !string.IsNullOrWhiteSpace(content))
             {
-                root.TryGetProperty("data", out var dataElement);
-                if (dataElement.ValueKind == JsonValueKind.Object || dataElement.ValueKind == JsonValueKind.Array)
-                {
-                    var dataText = dataElement.GetRawText();
-                    data = JsonConvert.DeserializeObject<T>(dataText);
-                }
+                data = JsonSerializer.Deserialize<T>(content);
             }
 
-            return (success, data, errorCode);
+            return (success, data, null);
         }
         catch (JsonException ex)
         {

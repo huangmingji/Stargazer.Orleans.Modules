@@ -17,11 +17,11 @@ public class AccountController(
     [HttpPost("login")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
-    public async Task<IActionResult> LoginAsync([FromBody] VerifyPasswordInputDto input, CancellationToken cancellationToken)
+    public async Task<TokenResponseDto> LoginAsync([FromBody] VerifyPasswordInputDto input, CancellationToken cancellationToken)
     { 
         if (!ModelState.IsValid)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_input", message: "Invalid input data."));
+            throw new ArgumentException("invalid_input");
         }
         
         var userGrain = client.GetGrain<IUserGrain>(0);
@@ -30,73 +30,69 @@ public class AccountController(
             var user = await userGrain.GetUserDataAsync(input.Account, cancellationToken);
             if (user == null)
             {
-                return BadRequest(ResponseData.Fail(code: "user_not_found", message: "User not found."));
+                throw new KeyNotFoundException("user_not_found");
             }
 
             var roles = await userGrain.GetUserRolesAsync(user.Id, cancellationToken);
             var roleNames = roles.Select(r => r.Name).ToList();
             
-            var (accessToken, refreshToken) = jwtTokenService.GenerateTokens(user.Id, user.Account, roleNames);
+            var (accessToken, refreshToken, expires) = jwtTokenService.GenerateTokens(user.Id, user.Account, roleNames);
 
-            var response = new TokenResponseDto
+            return new TokenResponseDto
             {
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddHours(1),
+                ExpiresAt = expires,
                 User = user
             };
-
-            return Ok(response);
         }
 
-        return BadRequest(ResponseData.Fail(code: "account_password_incorrect", message: "The account or password is incorrect."));
+        throw new InvalidOperationException("account_password_incorrect");
     }
     
     [HttpPost("register")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
-    public async Task<IActionResult> RegisterAsync([FromBody] RegisterAccountInputDto input, CancellationToken cancellationToken)
+    public async Task<TokenResponseDto> RegisterAsync([FromBody] RegisterAccountInputDto input, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_input", message: "Invalid input data."));
+            throw new ArgumentException("invalid_input");
         }
         
         var userGrain = client.GetGrain<IUserGrain>(0);
         if (await userGrain.AccountExistedAsync(input.Account, cancellationToken))
         {
-            return BadRequest(ResponseData.Fail(code:"account_exists", message: "The account already exists"));
+            throw new InvalidOperationException("account_exists");
         }
 
         var user = await userGrain.RegisterAsync(input, cancellationToken);
         
-        var (accessToken, refreshToken) = jwtTokenService.GenerateTokens(user.Id, user.Account, new List<string>());
+        var (accessToken, refreshToken, expires) = jwtTokenService.GenerateTokens(user.Id, user.Account, new List<string>());
 
-        var response = new TokenResponseDto
+        return new TokenResponseDto
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            ExpiresAt = expires,
             User = user
         };
-
-        return Ok(response);
     }
     
     [HttpPost("refresh")]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(TokenResponseDto))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
-    public async Task<IActionResult> RefreshTokenAsync([FromBody] RefreshTokenInputDto input, CancellationToken cancellationToken)
+    public async Task<TokenResponseDto> RefreshTokenAsync([FromBody] RefreshTokenInputDto input, CancellationToken cancellationToken)
     {
         if (!ModelState.IsValid)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_input", message: "Invalid input data."));
+            throw new ArgumentException("invalid_input");
         }
         
         var principal = jwtTokenService.ValidateToken(input.RefreshToken);
         if (principal == null)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_refresh_token", message: "Invalid refresh token."));
+            throw new InvalidOperationException("invalid_refresh_token");
         }
 
         var userIdClaim = principal.FindFirst("userId");
@@ -104,34 +100,32 @@ public class AccountController(
         
         if (userIdClaim == null || accountClaim == null)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_token", message: "Invalid token claims."));
+            throw new InvalidOperationException("invalid_token");
         }
 
         if (!Guid.TryParse(userIdClaim.Value, out var userId))
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_user_id", message: "Invalid user ID."));
+            throw new InvalidOperationException("invalid_user_id");
         }
 
         var userGrain = client.GetGrain<IUserGrain>(0);
         var user = await userGrain.GetUserDataAsync(userId, cancellationToken);
         if (user == null)
         {
-            return BadRequest(ResponseData.Fail(code: "user_not_found", message: "User not found."));
+            throw new KeyNotFoundException("user_not_found");
         }
 
         var roles = await userGrain.GetUserRolesAsync(userId, cancellationToken);
         var roleNames = roles.Select(r => r.Name).ToList();
         
-        var (accessToken, refreshToken) = jwtTokenService.GenerateTokens(userId, user.Account, roleNames);
+        var (accessToken, refreshToken, expires) = jwtTokenService.GenerateTokens(userId, user.Account, roleNames);
 
-        var response = new TokenResponseDto
+        return new TokenResponseDto
         {
             AccessToken = accessToken,
             RefreshToken = refreshToken,
-            ExpiresAt = DateTime.UtcNow.AddHours(1),
+            ExpiresAt = expires,
             User = user
         };
-
-        return Ok(response);
     }
 }

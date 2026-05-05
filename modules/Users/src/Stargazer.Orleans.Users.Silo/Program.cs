@@ -13,12 +13,13 @@ using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.Users.Silo;
 using Stargazer.Orleans.Users.Silo.Authorization;
-using Stargazer.Orleans.Users.Silo.Middleware;
 using Stargazer.Orleans.Users.Grains.Abstractions.Security;
 using Stargazer.Orleans.Users.Silo.Security;
 using System.Text;
 using System.Text.Json;
 using Newtonsoft.Json.Serialization;
+using Stargazer.Orleans.Users.Silo.Resources;
+using Stargazer.Orleans.Users.Silo.Middlewares;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
@@ -42,6 +43,7 @@ var allowedOrigins = configuration.GetSection("AllowedOrigins").Get<string[]>() 
 var apiPrefix = configuration.GetSection("Api:Prefix").Get<string>() ?? "api";
 builder.Services.AddSingleton(jwtSettings);
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<LocalizationService>();
 
 builder.Services.AddAuthentication(options =>
 {
@@ -101,24 +103,11 @@ builder.Services.AddOpenApi(options =>
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower;
-    })
-    // .AddNewtonsoftJson(op =>
-    // {
-    //     op.SerializerSettings.ContractResolver = new DefaultContractResolver()
-    //     {
-    //         NamingStrategy = new SnakeCaseNamingStrategy()
-    //     };
-    //     op.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-    //     // op.SerializerSettings.Converters.Add(new Ext.DateTimeJsonConverter());
-    //     op.SerializerSettings.Converters.Add(new Ext.LongJsonConverter());
-    // })
     .AddMvcOptions(options =>
     {
         options.Conventions.Insert(0, new CentralizedPrefixConvention(apiPrefix));
-    });
+    })
+    .AddGlobalExceptionFilter();
 
 var app = builder.Build();
 
@@ -133,7 +122,6 @@ if (app.Environment.IsDevelopment())
     );
 }
 
-app.UseGlobalExceptionMiddleware();
 app.UseHttpsRedirection();
 if (allowedOrigins.Length > 0)
 {

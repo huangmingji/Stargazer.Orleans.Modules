@@ -18,7 +18,7 @@ public class CurrentUserController(IClusterClient client, ILogger<CurrentUserCon
         var userIdClaim = User.FindFirst("userId");
         if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
         {
-            throw new UnauthorizedAccessException("Invalid token");
+            throw new UnauthorizedAccessException("invalid_token");
         }
         return userId;
     }
@@ -26,7 +26,7 @@ public class CurrentUserController(IClusterClient client, ILogger<CurrentUserCon
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserDataDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
-    public async Task<IActionResult> GetCurrentUser(CancellationToken cancellationToken = default)
+    public async Task<UserDataDto> GetCurrentUser(CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
         var userGrain = client.GetGrain<IUserGrain>(0);
@@ -34,21 +34,21 @@ public class CurrentUserController(IClusterClient client, ILogger<CurrentUserCon
         
         if (user == null)
         {
-            return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
+            throw new KeyNotFoundException("user_not_found");
         }
         
-        return Ok(user);
+        return user;
     }
 
     [HttpPut]
     [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UserDataDto))]
     [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
-    public async Task<IActionResult> UpdateCurrentUser([FromBody] UpdateProfileInputDto input, CancellationToken cancellationToken = default)
+    public async Task<UserDataDto> UpdateCurrentUser([FromBody] UpdateProfileInputDto input, CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_input", message: "Invalid input data."));
+            throw new ArgumentException("invalid_input");
         }
 
         var userId = GetCurrentUserId();
@@ -60,25 +60,25 @@ public class CurrentUserController(IClusterClient client, ILogger<CurrentUserCon
             
             if (user == null)
             {
-                return NotFound(ResponseData.Fail(code: "user_not_found", message: "User not found."));
+                throw new KeyNotFoundException("user_not_found");
             }
             
-            return Ok(user);
+            return user;
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ResponseData.Fail(code: "update_failed", message: ex.Message));
+            throw new InvalidOperationException("update_failed", ex);
         }
     }
 
     [HttpPost("change-password")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordInputDto input, CancellationToken cancellationToken = default)
+    public async Task ChangePassword([FromBody] ChangePasswordInputDto input, CancellationToken cancellationToken = default)
     {
         if (!ModelState.IsValid)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_input", message: "Invalid input data."));
+            throw new ArgumentException("invalid_input");
         }
 
         var userId = GetCurrentUserId();
@@ -92,55 +92,53 @@ public class CurrentUserController(IClusterClient client, ILogger<CurrentUserCon
 
         if (!isCurrentPasswordValid)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_password", message: "Current password is incorrect."));
+            throw new InvalidOperationException("invalid_password");
         }
 
         try
         {
             await userGrain.ChangePasswordAsync(userId, input, userId, cancellationToken);
-            return Ok();
         }
         catch (Exception ex)
         {
-            return BadRequest(ResponseData.Fail(code: "password_change_failed", message: ex.Message));
+            throw new InvalidOperationException("password_change_failed", ex);
         }
     }
 
     [HttpGet("roles")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<PermissionDataDto>))]
-    public async Task<IActionResult> GetCurrentUserRoles(CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<RoleDataDto>))]
+    public async Task<List<RoleDataDto>> GetCurrentUserRoles(CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
         var userGrain = client.GetGrain<IUserGrain>(0);
-        var roles = await userGrain.GetUserRolesAsync(userId, cancellationToken);
-        return Ok(roles);
+        return await userGrain.GetUserRolesAsync(userId, cancellationToken);
     }
 
     [HttpGet("permissions")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<RoleDataDto>))]
-    public async Task<IActionResult> GetCurrentUserPermissions(CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(List<PermissionDataDto>))]
+    public async Task<List<PermissionDataDto>> GetCurrentUserPermissions(CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
         var userGrain = client.GetGrain<IUserGrain>(0);
-        var permissions = await userGrain.GetUserPermissionsAsync(userId, cancellationToken);
-        
-        return Ok(permissions);
+        return await userGrain.GetUserPermissionsAsync(userId, cancellationToken);
     }
 
     [HttpGet("has-permission/{permission}")]
-    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResponseData))]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(ResponseData))]
-    public async Task<IActionResult> HasPermission(string permission, CancellationToken cancellationToken = default)
+    public async Task HasPermission(string permission, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(permission))
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_permission", message: "Permission code is required."));
+            throw new ArgumentException("invalid_permission");
         }
 
         var userId = GetCurrentUserId();
         var userGrain = client.GetGrain<IUserGrain>(0);
         var hasPermission = await userGrain.HasPermissionAsync(userId, permission, cancellationToken);
-        
-        return Ok(ResponseData.Success(data: hasPermission));
+        if (!hasPermission)
+        {
+            throw new InvalidOperationException("permission_denied");
+        }
     }
 }

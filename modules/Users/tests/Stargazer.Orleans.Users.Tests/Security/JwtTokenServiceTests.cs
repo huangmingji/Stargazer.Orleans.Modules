@@ -31,10 +31,11 @@ public class JwtTokenServiceTests
         var account = "testuser";
         var roles = new[] { "Admin", "User" };
 
-        var token = _tokenService.GenerateAccessToken(userId, account, roles);
+        var (token, expires) = _tokenService.GenerateAccessToken(userId, account, roles);
 
         Assert.NotNull(token);
         Assert.NotEmpty(token);
+        Assert.True(expires > DateTime.UtcNow);
     }
 
     [Fact]
@@ -44,7 +45,7 @@ public class JwtTokenServiceTests
         var account = "testuser";
         var roles = new[] { "Admin" };
 
-        var token = _tokenService.GenerateAccessToken(userId, account, roles);
+        var (token, expires) = _tokenService.GenerateAccessToken(userId, account, roles);
         var handler = new JwtSecurityTokenHandler();
         var jwtToken = handler.ReadJwtToken(token);
 
@@ -58,7 +59,7 @@ public class JwtTokenServiceTests
         var account = "testuser";
         var roles = new[] { "Admin" };
 
-        var token = _tokenService.GenerateAccessToken(userId, account, roles);
+        var (token, expires) = _tokenService.GenerateAccessToken(userId, account, roles);
         var handler = new JwtSecurityTokenHandler();
         var jwtToken = handler.ReadJwtToken(token);
 
@@ -72,7 +73,7 @@ public class JwtTokenServiceTests
         var account = "testuser";
         var roles = new[] { "Admin", "User" };
 
-        var token = _tokenService.GenerateAccessToken(userId, account, roles);
+        var (token, expires) = _tokenService.GenerateAccessToken(userId, account, roles);
         var handler = new JwtSecurityTokenHandler();
         var jwtToken = handler.ReadJwtToken(token);
 
@@ -89,34 +90,13 @@ public class JwtTokenServiceTests
         var account = "testuser";
         var roles = new[] { "Admin" };
 
-        var token = _tokenService.GenerateAccessToken(userId, account, roles);
+        var (token, expires) = _tokenService.GenerateAccessToken(userId, account, roles);
         var handler = new JwtSecurityTokenHandler();
         var jwtToken = handler.ReadJwtToken(token);
 
         Assert.Equal(_settings.Issuer, jwtToken.Issuer);
         Assert.Contains(_settings.Audience, jwtToken.Audiences);
     }
-
-    // [Fact]
-    // public void GenerateRefreshToken_ReturnsBase64String()
-    // {
-    //     var refreshToken = _tokenService.GenerateRefreshToken();
-    //
-    //     Assert.NotNull(refreshToken);
-    //     Assert.NotEmpty(refreshToken);
-    //     
-    //     var bytes = Convert.FromBase64String(refreshToken);
-    //     Assert.Equal(64, bytes.Length);
-    // }
-    //
-    // [Fact]
-    // public void GenerateRefreshToken_ReturnsUniqueTokens()
-    // {
-    //     var token1 = _tokenService.GenerateRefreshToken();
-    //     var token2 = _tokenService.GenerateRefreshToken();
-    //
-    //     Assert.NotEqual(token1, token2);
-    // }
 
     [Fact]
     public void GenerateTokens_ReturnsBothTokens()
@@ -125,12 +105,13 @@ public class JwtTokenServiceTests
         var account = "testuser";
         var roles = new[] { "Admin" };
 
-        var (accessToken, refreshToken) = _tokenService.GenerateTokens(userId, account, roles);
+        var (accessToken, refreshToken, expires) = _tokenService.GenerateTokens(userId, account, roles);
 
         Assert.NotNull(accessToken);
         Assert.NotNull(refreshToken);
         Assert.NotEmpty(accessToken);
         Assert.NotEmpty(refreshToken);
+        Assert.True(expires > DateTime.UtcNow);
     }
 
     [Fact]
@@ -140,7 +121,7 @@ public class JwtTokenServiceTests
         var account = "testuser";
         var roles = new[] { "Admin" };
 
-        var token = _tokenService.GenerateAccessToken(userId, account, roles);
+        var (token, expires) = _tokenService.GenerateAccessToken(userId, account, roles);
         var principal = _tokenService.ValidateToken(token);
 
         Assert.NotNull(principal);

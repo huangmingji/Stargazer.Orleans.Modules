@@ -19,7 +19,7 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
             Password = "Test@123456"
         };
 
-        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("api/account/register", input);
+        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("users/api/account/register", input);
 
         Assert.True(success);
         Assert.NotNull(data);
@@ -39,9 +39,9 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
             Password = "Test@123456"
         };
 
-        await PostAsync<TokenResponseDto>("api/account/register", input);
+        await PostAsync<TokenResponseDto>("users/api/account/register", input);
 
-        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("api/account/register", input);
+        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("users/api/account/register", input);
 
         Assert.False(success);
         Assert.Equal("account_exists", errorCode);
@@ -53,13 +53,13 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
         var account = $"login_test_{Guid.NewGuid():N}";
         var password = "Test@123456";
         
-        await PostAsync<object>("api/account/register", new RegisterAccountInputDto
+        await PostAsync<object>("users/api/account/register", new RegisterAccountInputDto
         {
             Account = account,
             Password = password
         });
 
-        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("api/account/login", new VerifyPasswordInputDto
+        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto
         {
             Account = account,
             Password = password
@@ -75,13 +75,13 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
     {
         var account = $"login_fail_{Guid.NewGuid():N}";
         
-        await PostAsync<object>("api/account/register", new RegisterAccountInputDto
+        await PostAsync<object>("users/api/account/register", new RegisterAccountInputDto
         {
             Account = account,
             Password = "Test@123456"
         });
 
-        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("api/account/login", new VerifyPasswordInputDto
+        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("users/api/account/login", new VerifyPasswordInputDto
         {
             Account = account,
             Password = "WrongPassword"
@@ -97,7 +97,7 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
         var account = $"refresh_test_{Guid.NewGuid():N}";
         var password = "Test@123456";
         
-        var (regSuccess, registerData, _) = await PostAsync<TokenResponseDto>("api/account/register", new RegisterAccountInputDto
+        var (regSuccess, registerData, _) = await PostAsync<TokenResponseDto>("users/api/account/register", new RegisterAccountInputDto
         {
             Account = account,
             Password = password
@@ -105,7 +105,7 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
         
         Assert.True(regSuccess);
 
-        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("api/account/refresh", new RefreshTokenInputDto
+        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("users/api/account/refresh", new RefreshTokenInputDto
         {
             RefreshToken = registerData!.RefreshToken
         });
@@ -119,7 +119,7 @@ public class AccountControllerIntegrationTests : IntegrationTestBase
     [Fact]
     public async Task Refresh_WithInvalidToken_ReturnsError()
     {
-        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("api/account/refresh", new RefreshTokenInputDto
+        var (success, data, errorCode) = await PostAsync<TokenResponseDto>("users/api/account/refresh", new RefreshTokenInputDto
         {
             RefreshToken = "invalid_token_string"
         });

@@ -37,7 +37,7 @@ public class IntegrationTestBase : IClassFixture<TestWebApplicationFactory>, IAs
     {
         var loginInput = new VerifyPasswordInputDto
         {
-            Name = "admin",
+            Account = "admin",
             Password = "Admin@123456"
         };
 
