@@ -1,0 +1,21 @@
+{
+  "bad_request": "参数错误",
+  "unauthorized": "认证失败",
+  "forbidden": "权限不足",
+  "not_found": "资源不存在",
+  "conflict": "数据冲突",
+  "internal_error": "服务器内部错误",
+  "bucket_not_found": "存储桶不存在",
+  "bucket_exists": "存储桶已存在",
+  "bucket_not_empty": "无法删除非空存储桶",
+  "object_not_found": "对象不存在",
+  "object_size_exceeded": "对象大小超过限制",
+  "bucket_object_limit_reached": "存储桶对象数量已达上限",
+  "invalid_file": "文件不能为空",
+  "upload_failed": "上传失败",
+  "invalid_key": "无效的对象键",
+  "invalid_expiry": "过期时间不能超过7天",
+  "multipart_failed": "分片上传失败",
+  "invalid_multipart": "无效或已過期的分片上传",
+  "multipart_mismatch": "分片上传与指定的存储桶或键不匹配"
+}

@@ -1,0 +1,21 @@
+{
+  "bad_request": "Bad Request",
+  "unauthorized": "Unauthorized",
+  "forbidden": "Forbidden",
+  "not_found": "Not Found",
+  "conflict": "Conflict",
+  "internal_error": "Internal Server Error",
+  "bucket_not_found": "Bucket not found",
+  "bucket_exists": "Bucket already exists",
+  "bucket_not_empty": "Cannot delete bucket with existing objects",
+  "object_not_found": "Object not found",
+  "object_size_exceeded": "Object size exceeds maximum allowed size",
+  "bucket_object_limit_reached": "Bucket has reached maximum object count limit",
+  "invalid_file": "File is required",
+  "upload_failed": "Upload failed",
+  "invalid_key": "Invalid object key",
+  "invalid_expiry": "Expiry cannot exceed 7 days",
+  "multipart_failed": "Multipart upload failed",
+  "invalid_multipart": "Invalid or expired multipart upload",
+  "multipart_mismatch": "Multipart upload does not match specified bucket or key"
+}

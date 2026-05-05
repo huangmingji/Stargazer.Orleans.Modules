@@ -20,14 +20,12 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <summary>
     /// 从 JWT Token 中获取当前用户 ID
     /// </summary>
-    /// <returns>当前用户 GUID</returns>
-    /// <exception cref="UnauthorizedAccessException">Token 无效时抛出</exception>
     private Guid GetCurrentUserId()
     {
         var userIdClaim = User.FindFirst("userId");
         if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
         {
-            throw new UnauthorizedAccessException("Invalid token");
+            throw new UnauthorizedAccessException("invalid_token");
         }
         return userId;
     }
@@ -35,28 +33,21 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
     /// <summary>
     /// 检查当前用户对存储桶的访问权限
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="action">操作类型 (Read/Write)</param>
-    /// <returns>是否有权限</returns>
-    private async Task<bool> HasBucketAccessAsync(Guid bucketId, string action)
+    private async Task<bool> HasBucketAccessAsync(Guid bucketId, string action, CancellationToken cancellationToken = default)
     {
         var userId = GetCurrentUserId();
         var bucketGrain = client.GetGrain<IBucketGrain>(0);
-        return await bucketGrain.HasAccessPermissionAsync(bucketId, userId, action);
+        return await bucketGrain.HasAccessPermissionAsync(bucketId, userId, action, cancellationToken);
     }
 
     /// <summary>
     /// 下载对象
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>文件流</returns>
     [HttpGet("{bucketId:guid}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
     public async Task<IActionResult> DownloadObject(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read, cancellationToken);
         if (!hasAccess)
         {
             return Forbid();
@@ -64,413 +55,269 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
 
         var objectGrain = client.GetGrain<IObjectGrain>(0);
         var stream = await objectGrain.DownloadAsync(bucketId, key, cancellationToken);
-        
+
         if (stream == null)
         {
-            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
+            throw new KeyNotFoundException("object_not_found");
         }
 
         var metadata = await objectGrain.GetMetadataAsync(bucketId, key, cancellationToken);
-        
+
         return File(stream, metadata?.ContentType ?? "application/octet-stream", metadata?.FileName ?? key);
     }
 
     /// <summary>
     /// 检查对象是否存在
-    /// 使用 HEAD 请求，只返回响应头，不返回 body
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>204 表示存在，404 表示不存在</returns>
     [HttpHead("{bucketId:guid}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
-    public async Task<IActionResult> CheckObjectExists(Guid bucketId, string key, CancellationToken cancellationToken = default)
+    public async Task CheckObjectExists(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         var objectGrain = client.GetGrain<IObjectGrain>(0);
         var exists = await objectGrain.ExistsAsync(bucketId, key, cancellationToken);
-        
+
         if (!exists)
         {
-            return NotFound();
+            throw new KeyNotFoundException("object_not_found");
         }
-        
-        return Ok();
     }
 
     /// <summary>
     /// 获取对象元数据
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>对象元数据</returns>
     [HttpGet("metadata/{bucketId:guid}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
-    public async Task<IActionResult> GetObjectMetadata(Guid bucketId, string key, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ObjectMetadataDto))]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
+    public async Task<ObjectMetadataDto> GetObjectMetadata(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
-        var bucketGrain = client.GetGrain<IBucketGrain>(0);
-        var bucket = await bucketGrain.GetBucketAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
-        }
-        
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         var objectGrain = client.GetGrain<IObjectGrain>(0);
         var metadata = await objectGrain.GetMetadataAsync(bucketId, key, cancellationToken);
-        
+
         if (metadata == null)
         {
-            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
+            throw new KeyNotFoundException("object_not_found");
         }
-        
-        return Ok(ResponseData.Success(data: metadata));
+
+        return metadata;
     }
 
     /// <summary>
     /// 列出存储桶中的对象
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="prefix">对象键前缀过滤</param>
-    /// <param name="pageIndex">页码 (默认 1)</param>
-    /// <param name="pageSize">每页数量 (默认 20, 最大 1000)</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>分页对象列表</returns>
     [HttpGet("{bucketId:guid}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
-    public async Task<IActionResult> ListObjects(Guid bucketId, [FromQuery] string? prefix, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(PageResult<ObjectMetadataDto>))]
+    public async Task<PageResult<ObjectMetadataDto>> ListObjects(Guid bucketId, [FromQuery] string? prefix, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         var objectGrain = client.GetGrain<IObjectGrain>(0);
-        var result = await objectGrain.ListObjectsAsync(bucketId, prefix, pageIndex, pageSize, cancellationToken);
-        return Ok(ResponseData.Success(data: result));
+        return await objectGrain.ListObjectsAsync(bucketId, prefix, pageIndex, pageSize, cancellationToken);
     }
 
     /// <summary>
     /// 上传对象
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="file">上传的文件</param>
-    /// <param name="contentType">文件 Content-Type</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>上传结果</returns>
     [HttpPost("{bucketId:guid}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.Create}")]
-    public async Task<IActionResult> UploadObject(Guid bucketId, string key, [FromForm] IFormFile file, [FromForm] string? contentType, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UploadResultDto))]
+    public async Task<UploadResultDto> UploadObject(Guid bucketId, string key, [FromForm] IFormFile file, [FromForm] string? contentType, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         if (file == null || file.Length == 0)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_file", message: "File is required."));
+            throw new ArgumentException("invalid_file");
         }
 
-        try
-        {
-            await using var stream = file.OpenReadStream();
-            var objectGrain = client.GetGrain<IObjectGrain>(0);
-            
-            var result = await objectGrain.UploadAsync(
-                bucketId, 
-                key, 
-                stream, 
-                contentType ?? file.ContentType ?? "application/octet-stream",
-                null,
-                cancellationToken);
-            
-            return CreatedAtAction(nameof(DownloadObject), new { bucketId, key }, ResponseData.Success(data: result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
-        }
+        await using var stream = file.OpenReadStream();
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
+
+        return await objectGrain.UploadAsync(
+            bucketId,
+            key,
+            stream,
+            contentType ?? file.ContentType ?? "application/octet-stream",
+            null,
+            cancellationToken);
     }
 
     /// <summary>
     /// 更新/覆盖对象
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="file">上传的文件</param>
-    /// <param name="contentType">文件 Content-Type</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>上传结果</returns>
     [HttpPut("{bucketId:guid}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.Update}")]
-    public async Task<IActionResult> UpdateObject(Guid bucketId, string key, [FromForm] IFormFile file, [FromForm] string? contentType, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UploadResultDto))]
+    public async Task<UploadResultDto> UpdateObject(Guid bucketId, string key, [FromForm] IFormFile file, [FromForm] string? contentType, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         if (file == null || file.Length == 0)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_file", message: "File is required."));
+            throw new ArgumentException("invalid_file");
         }
 
-        try
-        {
-            await using var stream = file.OpenReadStream();
-            var objectGrain = client.GetGrain<IObjectGrain>(0);
-            
-            var result = await objectGrain.UploadAsync(
-                bucketId, 
-                key, 
-                stream, 
-                contentType ?? file.ContentType ?? "application/octet-stream",
-                null,
-                cancellationToken);
-            
-            return Ok(ResponseData.Success(data: result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
-        }
+        await using var stream = file.OpenReadStream();
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
+
+        return await objectGrain.UploadAsync(
+            bucketId,
+            key,
+            stream,
+            contentType ?? file.ContentType ?? "application/octet-stream",
+            null,
+            cancellationToken);
     }
 
     /// <summary>
     /// 删除对象
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>删除结果</returns>
     [HttpDelete("{bucketId:guid}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.Delete}")]
-    public async Task<IActionResult> DeleteObject(Guid bucketId, string key, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(ResponseData))]
+    public async Task DeleteObject(Guid bucketId, string key, CancellationToken cancellationToken = default)
     {
-        var bucketGrain = client.GetGrain<IBucketGrain>(0);
-        var bucket = await bucketGrain.GetBucketAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
-        }
-        
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         var objectGrain = client.GetGrain<IObjectGrain>(0);
         var result = await objectGrain.DeleteAsync(bucketId, key, cancellationToken);
-        
+
         if (!result)
         {
-            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
+            throw new KeyNotFoundException("object_not_found");
         }
-        
-        return Ok(ResponseData.Success(data: true));
     }
 
     /// <summary>
     /// 获取对象签名 URL
-    /// 用于临时授权访问私有对象，最长有效期为 7 天
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="expiry">过期时间</param>
-    /// <param name="method">HTTP 方法 (GET/PUT/DELETE 等)</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>签名 URL</returns>
     [HttpGet("signed-url/{bucketId:guid}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.View}")]
-    public async Task<IActionResult> GetSignedUrl(Guid bucketId, string key, [FromQuery] TimeSpan expiry, [FromQuery] string method = "GET", CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(SignedUrlDto))]
+    public async Task<SignedUrlDto> GetSignedUrl(Guid bucketId, string key, [FromQuery] TimeSpan expiry, [FromQuery] string method = "GET", CancellationToken cancellationToken = default)
     {
-        var bucketGrain = client.GetGrain<IBucketGrain>(0);
-        var bucket = await bucketGrain.GetBucketAsync(bucketId, cancellationToken);
-        if (bucket == null)
+        if (expiry.TotalSeconds > 604800)
         {
-            return NotFound(ResponseData.Fail(code: "object_not_found", message: "Object not found."));
-        }
-        
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read);
-        if (!hasAccess)
-        {
-            return Forbid();
+            throw new ArgumentException("invalid_expiry");
         }
 
-        if (expiry.TotalSeconds > 604800) // 7 days max
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Read, cancellationToken);
+        if (!hasAccess)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_expiry", message: "Expiry cannot exceed 7 days."));
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         var objectGrain = client.GetGrain<IObjectGrain>(0);
-        var result = await objectGrain.GetSignedUrlAsync(bucketId, key, expiry, method, cancellationToken);
-        return Ok(ResponseData.Success(data: result));
+        return await objectGrain.GetSignedUrlAsync(bucketId, key, expiry, method, cancellationToken);
     }
 
     /// <summary>
     /// 初始化分片上传
-    /// 用于大文件分片上传，先调用此接口获取 UploadId
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="request">请求参数</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>分片上传信息</returns>
     [HttpPost("multipart/initiate/{bucketId:guid}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.Create}")]
-    public async Task<IActionResult> InitiateMultipartUpload(Guid bucketId, string key, [FromBody] InitiateMultipartUploadRequest request, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(InitiateMultipartUploadResultDto))]
+    public async Task<InitiateMultipartUploadResultDto> InitiateMultipartUpload(Guid bucketId, string key, [FromBody] InitiateMultipartUploadRequest request, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
-        try
-        {
-            var objectGrain = client.GetGrain<IObjectGrain>(0);
-            var result = await objectGrain.InitiateMultipartUploadAsync(bucketId, key, request.ContentType, request.Metadata, cancellationToken);
-            return Ok(ResponseData.Success(data: result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
-        }
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
+        return await objectGrain.InitiateMultipartUploadAsync(bucketId, key, request.ContentType, request.Metadata, cancellationToken);
     }
 
     /// <summary>
     /// 上传分片
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="uploadId">分片上传 ID</param>
-    /// <param name="file">分片文件内容</param>
-    /// <param name="partNumber">分片编号 (从 1 开始)</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>分片上传结果</returns>
     [HttpPost("multipart/part/{bucketId:guid}/{uploadId}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.Create}")]
-    public async Task<IActionResult> UploadPart(Guid bucketId, string key, string uploadId, [FromForm] IFormFile file, [FromForm] int partNumber, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UploadPartResultDto))]
+    public async Task<UploadPartResultDto> UploadPart(Guid bucketId, string key, string uploadId, [FromForm] IFormFile file, [FromForm] int partNumber, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         if (file == null || file.Length == 0)
         {
-            return BadRequest(ResponseData.Fail(code: "invalid_file", message: "File is required."));
+            throw new ArgumentException("invalid_file");
         }
 
-        try
-        {
-            await using var stream = file.OpenReadStream();
-            var objectGrain = client.GetGrain<IObjectGrain>(0);
-            
-            var result = await objectGrain.UploadPartAsync(bucketId, key, uploadId, partNumber, stream, cancellationToken);
-            return Ok(ResponseData.Success(data: result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "upload_failed", message: ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
-        }
+        await using var stream = file.OpenReadStream();
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
+
+        return await objectGrain.UploadPartAsync(bucketId, key, uploadId, partNumber, stream, cancellationToken);
     }
 
     /// <summary>
     /// 完成分片上传
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="uploadId">分片上传 ID</param>
-    /// <param name="request">请求参数，包含所有分片信息</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>上传结果</returns>
     [HttpPost("multipart/complete/{bucketId:guid}/{uploadId}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.Create}")]
-    public async Task<IActionResult> CompleteMultipartUpload(Guid bucketId, string key, string uploadId, [FromBody] CompleteMultipartUploadRequest request, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(UploadResultDto))]
+    public async Task<UploadResultDto> CompleteMultipartUpload(Guid bucketId, string key, string uploadId, [FromBody] CompleteMultipartUploadRequest request, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
         var objectGrain = client.GetGrain<IObjectGrain>(0);
-        
-        try
-        {
-            var result = await objectGrain.CompleteMultipartUploadAsync(bucketId, key, uploadId, request.Parts, cancellationToken);
-            return Ok(ResponseData.Success(data: result));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "multipart_failed", message: ex.Message));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
-        }
+        return await objectGrain.CompleteMultipartUploadAsync(bucketId, key, uploadId, request.Parts, cancellationToken);
     }
 
     /// <summary>
     /// 取消分片上传
     /// </summary>
-    /// <param name="bucketId">存储桶 GUID</param>
-    /// <param name="key">对象键</param>
-    /// <param name="uploadId">分片上传 ID</param>
-    /// <param name="cancellationToken">取消令牌</param>
-    /// <returns>取消结果</returns>
     [HttpDelete("multipart/{bucketId:guid}/{uploadId}/{*key}")]
     [Authorize(policy: $"permission:{StoragePolicies.Objects.Delete}")]
-    public async Task<IActionResult> AbortMultipartUpload(Guid bucketId, string key, string uploadId, CancellationToken cancellationToken = default)
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task AbortMultipartUpload(Guid bucketId, string key, string uploadId, CancellationToken cancellationToken = default)
     {
-        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write);
+        var hasAccess = await HasBucketAccessAsync(bucketId, StorageActions.Write, cancellationToken);
         if (!hasAccess)
         {
-            return Forbid();
+            throw new UnauthorizedAccessException("access_denied");
         }
 
-        try
-        {
-            var objectGrain = client.GetGrain<IObjectGrain>(0);
-            await objectGrain.AbortMultipartUploadAsync(bucketId, key, uploadId, cancellationToken);
-            return Ok(ResponseData.Success(data: true));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ResponseData.Fail(code: "invalid_key", message: ex.Message));
-        }
+        var objectGrain = client.GetGrain<IObjectGrain>(0);
+        await objectGrain.AbortMultipartUploadAsync(bucketId, key, uploadId, cancellationToken);
     }
 }
 
@@ -479,14 +326,8 @@ public class ObjectController(IClusterClient client, ILogger<ObjectController> l
 /// </summary>
 public class InitiateMultipartUploadRequest
 {
-    /// <summary>
-    /// 对象的 Content-Type
-    /// </summary>
     public string ContentType { get; set; } = "application/octet-stream";
-    
-    /// <summary>
-    /// 自定义元数据
-    /// </summary>
+
     public Dictionary<string, string>? Metadata { get; set; }
 }
 
@@ -495,8 +336,5 @@ public class InitiateMultipartUploadRequest
 /// </summary>
 public class CompleteMultipartUploadRequest
 {
-    /// <summary>
-    /// 所有分片的 ETag 信息
-    /// </summary>
     public List<PartETagDto> Parts { get; set; } = new();
 }

@@ -31,7 +31,7 @@ public class BucketGrain(
         var existing = await bucketRepository.FindAsync(x => x.Name == dto.Name, cancellationToken);
         if (existing != null)
         {
-            throw new InvalidOperationException($"Bucket with name '{dto.Name}' already exists");
+            throw new InvalidOperationException("bucket_exists");
         }
 
         var bucket = new Bucket
@@ -54,8 +54,12 @@ public class BucketGrain(
 
     public async Task<BucketDto> UpdateBucketAsync(Guid id, BucketDto dto, CancellationToken cancellationToken = default)
     {
-        var bucket = await bucketRepository.GetAsync(id, cancellationToken);
-        
+        var bucket = await bucketRepository.FindAsync(id, cancellationToken);
+        if (bucket == null)
+        {
+            throw new KeyNotFoundException("bucket_not_found");
+        }
+
         bucket.Description = dto.Description;
         bucket.Acl = Enum.Parse<BucketAclType>(dto.Acl);
         bucket.MaxObjectSize = dto.MaxObjectSize;
@@ -78,7 +82,7 @@ public class BucketGrain(
 
         if (bucket.CurrentObjectCount > 0)
         {
-            throw new InvalidOperationException("Cannot delete bucket with existing objects");
+            throw new InvalidOperationException("bucket_not_empty");
         }
 
         await bucketRepository.DeleteAsync(id, cancellationToken);
@@ -111,7 +115,7 @@ public class BucketGrain(
         }
 
         var policies = await policyRepository.FindListAsync(
-            x => x.BucketId == bucketId && x.Principal == userId.ToString() && x.IsActive, 
+            x => x.BucketId == bucketId && x.Principal == userId.ToString() && x.IsActive,
             cancellationToken);
 
         foreach (var policy in policies)

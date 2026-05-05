@@ -1,16 +1,19 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using Serilog;
-using Stargazer.Common.Extend;
 using Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL;
 using Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL.DbMigrations;
 using Stargazer.Orleans.ObjectStorage.Silo;
 using Stargazer.Orleans.ObjectStorage.Silo.Authorization;
+using Stargazer.Orleans.ObjectStorage.Silo.Middlewares;
+using Stargazer.Orleans.ObjectStorage.Silo.Resources;
 using Stargazer.Orleans.Users.Grains.Abstractions.Security;
 using System.Text;
 
@@ -33,6 +36,7 @@ Log.Logger = new LoggerConfiguration()
 builder.Services.UseEntityFramworkCore().MigrateDatabase();
 
 var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>() ?? throw new InvalidOperationException("JwtSettings not configured");
+var apiPrefix = configuration.GetSection("Api:Prefix").Get<string>() ?? "api";
 
 builder.Services.AddAuthentication(options =>
 {
@@ -60,6 +64,8 @@ builder.Services.AddAuthorization(options =>
     options.AddStoragePermissionPolicies();
 });
 
+builder.Services.AddSingleton<LocalizationService>();
+
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi(options =>
@@ -69,23 +75,21 @@ builder.Services.AddOpenApi(options =>
     {
         document.Info = new()
         {
-            Title = "Stargazer Orleans API",
+            Title = "Stargazer Object Storage API",
             Version = "v1",
-            Description = "Stargazer Orleans API"
+            Description = "Stargazer Object Storage API"
         };
         return Task.CompletedTask;
     });
     options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
 });
 
-builder.Services.AddControllers().AddNewtonsoftJson(
-    op =>
+builder.Services.AddControllers()
+    .AddMvcOptions(options =>
     {
-        op.SerializerSettings.ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver();
-        op.SerializerSettings.NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore;
-        op.SerializerSettings.Converters.Add(new Ext.DateTimeJsonConverter());
-        op.SerializerSettings.Converters.Add(new Ext.LongJsonConverter());
-    });
+        options.Conventions.Insert(0, new CentralizedPrefixConvention(apiPrefix));
+    })
+    .AddGlobalExceptionFilter();
 
 var app = builder.Build();
 
@@ -94,7 +98,7 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference(options =>
-        options.WithTitle("Stargazer Orleans API")
+        options.WithTitle("Stargazer Object Storage API")
             .AddPreferredSecuritySchemes(JwtBearerDefaults.AuthenticationScheme)
             .AddHttpAuthentication(JwtBearerDefaults.AuthenticationScheme, auth => { auth.Token = ""; })
     );
@@ -120,7 +124,7 @@ internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvi
                 ["Bearer"] = new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.Http,
-                    Scheme = "bearer", // "bearer" refers to the header name here
+                    Scheme = "bearer",
                     In = ParameterLocation.Header,
                     BearerFormat = "Json Web Token"
                 }
@@ -131,3 +135,21 @@ internal sealed class BearerSecuritySchemeTransformer(IAuthenticationSchemeProvi
     }
 }
 
+internal sealed class CentralizedPrefixConvention(string prefix) : IApplicationModelConvention
+{
+    public void Apply(ApplicationModel application)
+    {
+        foreach (var controller in application.Controllers)
+        {
+            foreach (var selector in controller.Selectors)
+            {
+                if (selector.AttributeRouteModel != null)
+                {
+                    selector.AttributeRouteModel = AttributeRouteModel.CombineAttributeRouteModel(
+                        new AttributeRouteModel(new RouteAttribute(prefix)),
+                        selector.AttributeRouteModel);
+                }
+            }
+        }
+    }
+}

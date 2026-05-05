@@ -2,7 +2,6 @@ using System.Data.Common;
 using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Stargazer.Orleans.ObjectStorage.Domain;
-using Stargazer.Orleans.Users.EntityFrameworkCore.PostgreSQL;
 
 namespace Stargazer.Orleans.ObjectStorage.EntityFrameworkCore.PostgreSQL
 {

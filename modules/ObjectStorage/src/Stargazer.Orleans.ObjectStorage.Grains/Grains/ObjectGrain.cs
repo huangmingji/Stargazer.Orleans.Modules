@@ -14,7 +14,7 @@ using ObjectInfoEntity = Stargazer.Orleans.ObjectStorage.Domain.ObjectStorage.Ob
 namespace Stargazer.Orleans.ObjectStorage.Grains.Grains;
 
 [StatelessWorker]
-public class ObjectGrain(
+public partial class ObjectGrain(
     IRepository<ObjectInfoEntity, Guid> objectRepository,
     IRepository<MultipartUploadEntity, Guid> multipartRepository,
     IRepository<BucketEntity, Guid> bucketRepository,
@@ -27,27 +27,27 @@ public class ObjectGrain(
     {
         if (string.IsNullOrWhiteSpace(key))
         {
-            throw new ArgumentException("Object key cannot be empty or whitespace", nameof(key));
+            throw new ArgumentException("invalid_key", nameof(key));
         }
 
         if (key.StartsWith("/") || key.StartsWith("\\"))
         {
-            throw new ArgumentException("Object key cannot start with a forward or backward slash", nameof(key));
+            throw new ArgumentException("invalid_key", nameof(key));
         }
 
         if (key.Contains(".."))
         {
-            throw new ArgumentException("Object key cannot contain path traversal sequences (..)", nameof(key));
+            throw new ArgumentException("invalid_key", nameof(key));
         }
 
         if (key.ContainsAny(InvalidKeyChars))
         {
-            throw new ArgumentException("Object key contains invalid characters", nameof(key));
+            throw new ArgumentException("invalid_key", nameof(key));
         }
 
         if (key.Length > 1024)
         {
-            throw new ArgumentException("Object key cannot exceed 1024 characters", nameof(key));
+            throw new ArgumentException("invalid_key", nameof(key));
         }
     }
 
@@ -55,23 +55,18 @@ public class ObjectGrain(
     {
         ValidateKey(key);
 
-        var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            throw new InvalidOperationException("Bucket not found");
-        }
-
+        var bucket = await GetBucketOrThrowAsync(bucketId, cancellationToken);
         var existingObject = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key, cancellationToken);
         long originalSize = existingObject?.Size ?? 0;
 
         if (content.Length > bucket.MaxObjectSize)
         {
-            throw new InvalidOperationException($"Object size exceeds the maximum allowed size of {bucket.MaxObjectSize} bytes");
+            throw new InvalidOperationException("object_size_exceeded");
         }
 
         if (existingObject == null && bucket.CurrentObjectCount >= bucket.MaxObjectCount)
         {
-            throw new InvalidOperationException($"Bucket has reached the maximum object count limit of {bucket.MaxObjectCount}");
+            throw new InvalidOperationException("bucket_object_limit_reached");
         }
 
         var objectMetadata = new ObjectMetadata
@@ -112,9 +107,7 @@ public class ObjectGrain(
             await objectRepository.InsertAsync(newObject, cancellationToken);
         }
 
-        bucket.CurrentObjectCount = await objectRepository.CountAsync(x => x.BucketId == bucketId && !x.IsDeleted, cancellationToken);
-        bucket.CurrentStorageSize = bucket.CurrentStorageSize - originalSize + objectMetadata.ContentLength;
-        await bucketRepository.UpdateAsync(bucket, cancellationToken);
+        await UpdateBucketStatsAsync(bucketId, bucket, originalSize, objectMetadata.ContentLength, cancellationToken);
 
         logger.LogInformation("Uploaded object {Key} to bucket {BucketId}", key, bucketId);
 
@@ -134,18 +127,10 @@ public class ObjectGrain(
         ValidateKey(key);
 
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            return null;
-        }
+        if (bucket == null) return null;
 
         var exists = await storageProvider.ObjectExistsAsync(bucket.Name, key, cancellationToken);
-        if (!exists)
-        {
-            return null;
-        }
-
-        return await storageProvider.GetObjectAsync(bucket.Name, key, cancellationToken);
+        return exists ? await storageProvider.GetObjectAsync(bucket.Name, key, cancellationToken) : null;
     }
 
     public async Task<bool> DeleteAsync(Guid bucketId, string key, CancellationToken cancellationToken = default)
@@ -153,16 +138,10 @@ public class ObjectGrain(
         ValidateKey(key);
 
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            return false;
-        }
+        if (bucket == null) return false;
 
         var existingObject = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key && !x.IsDeleted, cancellationToken);
-        if (existingObject == null)
-        {
-            return false;
-        }
+        if (existingObject == null) return false;
 
         await storageProvider.DeleteObjectAsync(bucket.Name, key, cancellationToken);
 
@@ -170,9 +149,7 @@ public class ObjectGrain(
         existingObject.LastModified = DateTime.UtcNow;
         await objectRepository.UpdateAsync(existingObject, cancellationToken);
 
-        bucket.CurrentObjectCount = await objectRepository.CountAsync(x => x.BucketId == bucketId && !x.IsDeleted, cancellationToken);
-        bucket.CurrentStorageSize = Math.Max(0, bucket.CurrentStorageSize - existingObject.Size);
-        await bucketRepository.UpdateAsync(bucket, cancellationToken);
+        await UpdateBucketStatsAsync(bucketId, bucket, existingObject.Size, 0, cancellationToken);
 
         logger.LogInformation("Deleted object {Key} from bucket {BucketId}", key, bucketId);
         return true;
@@ -183,10 +160,7 @@ public class ObjectGrain(
         ValidateKey(key);
 
         var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            return false;
-        }
+        if (bucket == null) return false;
 
         return await storageProvider.ObjectExistsAsync(bucket.Name, key, cancellationToken);
     }
@@ -196,54 +170,17 @@ public class ObjectGrain(
         ValidateKey(key);
 
         var obj = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key && !x.IsDeleted, cancellationToken);
-        if (obj == null)
-        {
-            return null;
-        }
-
-        return new ObjectMetadataDto
-        {
-            Id = obj.Id,
-            Key = obj.Key,
-            FileName = obj.FileName,
-            ContentType = obj.ContentType,
-            Size = obj.Size,
-            ETag = obj.ETag,
-            LastModified = obj.LastModified,
-            Metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(obj.Metadata) ?? new(),
-            CreationTime = obj.CreationTime
-        };
+        return obj?.ToMetadataDto();
     }
 
     public async Task<List<ObjectMetadataDto>> ListObjectsAsync(Guid bucketId, string? prefix, CancellationToken cancellationToken = default)
     {
-        Expression<Func<ObjectInfoEntity, bool>> predicate = x => x.BucketId == bucketId && !x.IsDeleted;
-        
-        if (!string.IsNullOrEmpty(prefix))
-        {
-            predicate = x => x.BucketId == bucketId && !x.IsDeleted && x.Key.StartsWith(prefix);
-        }
+        Expression<Func<ObjectInfoEntity, bool>> predicate = string.IsNullOrEmpty(prefix)
+            ? x => x.BucketId == bucketId && !x.IsDeleted
+            : x => x.BucketId == bucketId && !x.IsDeleted && x.Key.StartsWith(prefix);
 
-        var (objects, _) = await objectRepository.FindListAsync(
-            predicate, 
-            1, 
-            int.MaxValue, 
-            x => x.LastModified, 
-            true, 
-            cancellationToken);
-
-        return objects.Select(x => new ObjectMetadataDto
-        {
-            Id = x.Id,
-            Key = x.Key,
-            FileName = x.FileName,
-            ContentType = x.ContentType,
-            Size = x.Size,
-            ETag = x.ETag,
-            LastModified = x.LastModified,
-            Metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(x.Metadata) ?? new(),
-            CreationTime = x.CreationTime
-        }).ToList();
+        var objects = await objectRepository.FindListAsync(predicate, cancellationToken);
+        return objects.Select(x => x.ToMetadataDto()).ToList();
     }
 
     public async Task<PageResult<ObjectMetadataDto>> ListObjectsAsync(Guid bucketId, string? prefix, int pageIndex, int pageSize, CancellationToken cancellationToken = default)
@@ -252,36 +189,22 @@ public class ObjectGrain(
         if (pageSize < 1) pageSize = 10;
         if (pageSize > 1000) pageSize = 1000;
 
-        Expression<Func<ObjectInfoEntity, bool>> predicate = x => x.BucketId == bucketId && !x.IsDeleted;
-        
-        if (!string.IsNullOrEmpty(prefix))
-        {
-            predicate = x => x.BucketId == bucketId && !x.IsDeleted && x.Key.StartsWith(prefix);
-        }
+        Expression<Func<ObjectInfoEntity, bool>> predicate = string.IsNullOrEmpty(prefix)
+            ? x => x.BucketId == bucketId && !x.IsDeleted
+            : x => x.BucketId == bucketId && !x.IsDeleted && x.Key.StartsWith(prefix);
 
         var (objects, total) = await objectRepository.FindListAsync(
-            predicate, 
-            pageIndex, 
-            pageSize, 
-            x => x.LastModified, 
-            true, 
+            predicate,
+            pageIndex,
+            pageSize,
+            x => x.LastModified,
+            true,
             cancellationToken);
 
         return new PageResult<ObjectMetadataDto>
         {
             Total = total,
-            Items = objects.Select(x => new ObjectMetadataDto
-            {
-                Id = x.Id,
-                Key = x.Key,
-                FileName = x.FileName,
-                ContentType = x.ContentType,
-                Size = x.Size,
-                ETag = x.ETag,
-                LastModified = x.LastModified,
-                Metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(x.Metadata) ?? new(),
-                CreationTime = x.CreationTime
-            }).ToList()
+            Items = objects.Select(x => x.ToMetadataDto()).ToList()
         };
     }
 
@@ -289,12 +212,7 @@ public class ObjectGrain(
     {
         ValidateKey(key);
 
-        var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            throw new InvalidOperationException("Bucket not found");
-        }
-
+        var bucket = await GetBucketOrThrowAsync(bucketId, cancellationToken);
         var signedUrl = await storageProvider.GetSignedUrlAsync(bucket.Name, key, expiry, new HttpMethod(method), cancellationToken);
 
         return new SignedUrlDto
@@ -308,16 +226,12 @@ public class ObjectGrain(
     {
         ValidateKey(key);
 
-        var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            throw new InvalidOperationException("Bucket not found");
-        }
-
+        var bucket = await GetBucketOrThrowAsync(bucketId, cancellationToken);
         var existingObject = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key, cancellationToken);
+
         if (existingObject == null && bucket.CurrentObjectCount >= bucket.MaxObjectCount)
         {
-            throw new InvalidOperationException($"Bucket has reached the maximum object count limit of {bucket.MaxObjectCount}");
+            throw new InvalidOperationException("bucket_object_limit_reached");
         }
 
         var objectMetadata = new ObjectMetadata
@@ -356,74 +270,35 @@ public class ObjectGrain(
     {
         ValidateKey(key);
 
-        var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            throw new InvalidOperationException("Bucket not found");
-        }
+        await GetBucketOrThrowAsync(bucketId, cancellationToken);
+        var multipart = await GetMultipartOrThrowAsync(uploadId, bucketId, key, cancellationToken);
 
-        var multipart = await multipartRepository.FindAsync(x => x.UploadId == uploadId, cancellationToken);
-        if (multipart == null || multipart.Status != UploadStatus.InProgress)
-        {
-            throw new InvalidOperationException("Invalid or expired multipart upload");
-        }
+        var etag = await storageProvider.UploadPartAsync(
+            (await bucketRepository.FindAsync(bucketId, cancellationToken))!.Name,
+            key, uploadId, partNumber, content, cancellationToken);
 
-        if (multipart.BucketId != bucketId || multipart.Key != key)
-        {
-            throw new InvalidOperationException("Multipart upload does not match the specified bucket or key");
-        }
-
-        var etag = await storageProvider.UploadPartAsync(bucket.Name, key, uploadId, partNumber, content, cancellationToken);
-
-        multipart.Parts.Add(new UploadPart
-        {
-            PartNumber = partNumber,
-            ETag = etag,
-            Size = content.Length
-        });
+        multipart.Parts.Add(new UploadPart { PartNumber = partNumber, ETag = etag, Size = content.Length });
         multipart.UploadedParts = multipart.Parts.Count;
         await multipartRepository.UpdateAsync(multipart, cancellationToken);
 
         logger.LogInformation("Uploaded part {PartNumber} for upload {UploadId}", partNumber, uploadId);
 
-        return new UploadPartResultDto
-        {
-            PartNumber = partNumber,
-            ETag = etag
-        };
+        return new UploadPartResultDto { PartNumber = partNumber, ETag = etag };
     }
 
     public async Task<UploadResultDto> CompleteMultipartUploadAsync(Guid bucketId, string key, string uploadId, List<PartETagDto> parts, CancellationToken cancellationToken = default)
     {
         ValidateKey(key);
 
-        var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            throw new InvalidOperationException("Bucket not found");
-        }
+        var bucket = await GetBucketOrThrowAsync(bucketId, cancellationToken);
+        var multipart = await GetMultipartOrThrowAsync(uploadId, bucketId, key, cancellationToken);
 
-        var multipart = await multipartRepository.FindAsync(x => x.UploadId == uploadId, cancellationToken);
-        if (multipart == null || multipart.Status != UploadStatus.InProgress)
-        {
-            throw new InvalidOperationException("Invalid or expired multipart upload");
-        }
-
-        if (multipart.BucketId != bucketId || multipart.Key != key)
-        {
-            throw new InvalidOperationException("Multipart upload does not match the specified bucket or key");
-        }
-
-        var partEtags = parts.Select(p => new PartETag
-        {
-            PartNumber = p.PartNumber,
-            ETag = p.ETag
-        }).ToList();
-
+        var partEtags = parts.Select(p => new PartETag { PartNumber = p.PartNumber, ETag = p.ETag }).ToList();
         var totalSize = multipart.Parts.Sum(p => p.Size);
+
         if (totalSize > bucket.MaxObjectSize)
         {
-            throw new InvalidOperationException($"Object size exceeds the maximum allowed size of {bucket.MaxObjectSize} bytes");
+            throw new InvalidOperationException("object_size_exceeded");
         }
 
         await storageProvider.CompleteMultipartUploadAsync(bucket.Name, key, uploadId, partEtags, cancellationToken);
@@ -433,7 +308,7 @@ public class ObjectGrain(
 
         var existingObject = await objectRepository.FindAsync(x => x.BucketId == bucketId && x.Key == key, cancellationToken);
         var originalSize = existingObject?.Size ?? 0;
-        
+
         if (existingObject != null)
         {
             existingObject.Size = totalSize;
@@ -461,9 +336,7 @@ public class ObjectGrain(
         multipart.Status = UploadStatus.Completed;
         await multipartRepository.UpdateAsync(multipart, cancellationToken);
 
-        bucket.CurrentObjectCount = await objectRepository.CountAsync(x => x.BucketId == bucketId && !x.IsDeleted, cancellationToken);
-        bucket.CurrentStorageSize = bucket.CurrentStorageSize - originalSize + totalSize;
-        await bucketRepository.UpdateAsync(bucket, cancellationToken);
+        await UpdateBucketStatsAsync(bucketId, bucket, originalSize, totalSize, cancellationToken);
 
         logger.LogInformation("Completed multipart upload for {Key}, uploadId: {UploadId}", key, uploadId);
 
@@ -482,28 +355,86 @@ public class ObjectGrain(
     {
         ValidateKey(key);
 
-        var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
-        if (bucket == null)
-        {
-            throw new InvalidOperationException("Bucket not found");
-        }
+        await GetBucketOrThrowAsync(bucketId, cancellationToken);
 
         var multipart = await multipartRepository.FindAsync(x => x.UploadId == uploadId, cancellationToken);
-        if (multipart == null)
-        {
-            return;
-        }
+        if (multipart == null) return;
 
         if (multipart.BucketId != bucketId || multipart.Key != key)
         {
-            throw new InvalidOperationException("Multipart upload does not match the specified bucket or key");
+            throw new InvalidOperationException("multipart_mismatch");
         }
 
-        await storageProvider.AbortMultipartUploadAsync(bucket.Name, key, uploadId, cancellationToken);
+        await storageProvider.AbortMultipartUploadAsync(
+            (await bucketRepository.FindAsync(bucketId, cancellationToken))!.Name,
+            key, uploadId, cancellationToken);
 
         multipart.Status = UploadStatus.Aborted;
         await multipartRepository.UpdateAsync(multipart, cancellationToken);
 
         logger.LogInformation("Aborted multipart upload {UploadId}", uploadId);
+    }
+
+    private async Task<BucketEntity> GetBucketOrThrowAsync(Guid bucketId, CancellationToken cancellationToken)
+    {
+        var bucket = await bucketRepository.FindAsync(bucketId, cancellationToken);
+        if (bucket == null)
+        {
+            throw new KeyNotFoundException("bucket_not_found");
+        }
+        return bucket;
+    }
+
+    private async Task<MultipartUploadEntity> GetMultipartOrThrowAsync(string uploadId, Guid bucketId, string key, CancellationToken cancellationToken)
+    {
+        var multipart = await multipartRepository.FindAsync(x => x.UploadId == uploadId, cancellationToken);
+        if (multipart == null || multipart.Status != UploadStatus.InProgress)
+        {
+            throw new InvalidOperationException("invalid_multipart");
+        }
+
+        if (multipart.BucketId != bucketId || multipart.Key != key)
+        {
+            throw new InvalidOperationException("multipart_mismatch");
+        }
+
+        return multipart;
+    }
+
+    private async Task UpdateBucketStatsAsync(Guid bucketId, BucketEntity bucket, long removedSize, long addedSize, CancellationToken cancellationToken)
+    {
+        bucket.CurrentObjectCount = await objectRepository.CountAsync(
+            x => x.BucketId == bucketId && !x.IsDeleted, cancellationToken);
+        bucket.CurrentStorageSize = Math.Max(0, bucket.CurrentStorageSize - removedSize + addedSize);
+        await bucketRepository.UpdateAsync(bucket, cancellationToken);
+    }
+}
+
+internal static class ObjectInfoExtensions
+{
+    public static ObjectMetadataDto ToMetadataDto(this ObjectInfoEntity obj)
+    {
+        Dictionary<string, string> metadata;
+        try
+        {
+            metadata = JsonSerializer.Deserialize<Dictionary<string, string>>(obj.Metadata) ?? new();
+        }
+        catch
+        {
+            metadata = new();
+        }
+
+        return new ObjectMetadataDto
+        {
+            Id = obj.Id,
+            Key = obj.Key,
+            FileName = obj.FileName,
+            ContentType = obj.ContentType,
+            Size = obj.Size,
+            ETag = obj.ETag,
+            LastModified = obj.LastModified,
+            Metadata = metadata,
+            CreationTime = obj.CreationTime
+        };
     }
 }
