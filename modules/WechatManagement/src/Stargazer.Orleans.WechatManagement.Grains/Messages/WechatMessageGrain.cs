@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Orleans;
 using Orleans.Concurrency;
 using Stargazer.Orleans.WechatManagement.Domain.Messages;
@@ -8,7 +9,9 @@ using Stargazer.Orleans.WechatManagement.Grains.Abstractions.Messages.Dtos;
 namespace Stargazer.Orleans.WechatManagement.Grains.Messages;
 
 [StatelessWorker]
-public class WechatMessageGrain(IRepository<WechatMessageLog, Guid> repository) : Grain, IWechatMessageGrain
+public class WechatMessageGrain(
+    IRepository<WechatMessageLog, Guid> repository,
+    ILogger<WechatMessageGrain> logger) : Grain, IWechatMessageGrain
 {
     public async Task<WechatMessageLogDto?> GetMessageAsync(Guid id, CancellationToken cancellationToken = default)
     {
@@ -20,7 +23,7 @@ public class WechatMessageGrain(IRepository<WechatMessageLog, Guid> repository) 
     {
         var message = new WechatMessageLog
         {
-            Id = this.GetPrimaryKey(),
+            Id = id,
             AccountId = input.AccountId,
             OpenId = input.OpenId,
             MessageType = input.MessageType,
@@ -33,11 +36,19 @@ public class WechatMessageGrain(IRepository<WechatMessageLog, Guid> repository) 
         };
 
         await repository.InsertAsync(message, cancellationToken);
+
+        logger.LogInformation("Created wechat message {MessageId} for openId {OpenId}", message.Id, message.OpenId);
+
         return MapToDto(message);
     }
 
     public async Task<WechatMessageLogDto?> UpdateMessageStatusAsync(Guid id, int status, string? errorMessage = null, CancellationToken cancellationToken = default)
     {
+        if (!IsValidStatus(status))
+        {
+            throw new ArgumentException($"Invalid message status: {status}");
+        }
+
         var message = await repository.FindAsync(id, cancellationToken);
         if (message == null) return null;
 
@@ -55,8 +66,32 @@ public class WechatMessageGrain(IRepository<WechatMessageLog, Guid> repository) 
 
     public async Task<bool> CancelMessageAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var result = await UpdateMessageStatusAsync(id, WechatMessageStatus.Cancelled, cancellationToken: cancellationToken);
-        return result != null;
+        var message = await repository.FindAsync(id, cancellationToken);
+        if (message == null) return false;
+
+        if (message.Status is WechatMessageStatus.Success or WechatMessageStatus.Failed or WechatMessageStatus.Cancelled)
+        {
+            logger.LogWarning("Cannot cancel message {MessageId}: status is {Status}", id, message.Status);
+            return false;
+        }
+
+        message.Status = WechatMessageStatus.Cancelled;
+        message.CompleteTime = DateTime.UtcNow;
+        message.LastModifyTime = DateTime.UtcNow;
+
+        await repository.UpdateAsync(message, cancellationToken);
+
+        logger.LogInformation("Cancelled message {MessageId}", id);
+        return true;
+    }
+
+    private static bool IsValidStatus(int status)
+    {
+        return status is WechatMessageStatus.Pending
+            or WechatMessageStatus.Sending
+            or WechatMessageStatus.Success
+            or WechatMessageStatus.Failed
+            or WechatMessageStatus.Cancelled;
     }
 
     private static WechatMessageLogDto MapToDto(WechatMessageLog message)
@@ -74,7 +109,8 @@ public class WechatMessageGrain(IRepository<WechatMessageLog, Guid> repository) 
             SendTime = message.SendTime,
             CompleteTime = message.CompleteTime,
             MsgId = message.MsgId,
-            CreationTime = message.CreationTime
+            CreationTime = message.CreationTime,
+            LastModifyTime = message.LastModifyTime
         };
     }
 }
