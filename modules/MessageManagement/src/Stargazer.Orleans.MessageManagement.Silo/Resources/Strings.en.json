@@ -13,6 +13,7 @@
   "batch_send_failed": "Failed to batch send messages",
   "get_failed": "Failed to get records",
   "retry_failed": "Failed to retry message",
+  "only_failed_can_retry": "Only failed messages can be retried",
   "cancel_failed": "Message cannot be cancelled",
   "invalid_name": "Template name is required",
   "invalid_code": "Template code is required",
@@ -21,5 +22,6 @@
   "update_failed": "Failed to update template",
   "delete_failed": "Failed to delete template",
   "preview_failed": "Failed to preview template",
-  "invalid_id": "Template ID is required"
+  "invalid_id": "Template ID is required",
+  "template_code_exists": "Template code already exists for this channel"
 }

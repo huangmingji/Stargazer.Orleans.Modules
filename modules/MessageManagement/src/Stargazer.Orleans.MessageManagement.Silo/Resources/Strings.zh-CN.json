@@ -13,6 +13,7 @@
   "batch_send_failed": "批量发送消息失败",
   "get_failed": "获取记录失败",
   "retry_failed": "重试消息失败",
+  "only_failed_can_retry": "仅失败的消息可以重试",
   "cancel_failed": "无法取消消息",
   "invalid_name": "模板名称不能为空",
   "invalid_code": "模板代码不能为空",
@@ -21,5 +22,6 @@
   "update_failed": "更新模板失败",
   "delete_failed": "删除模板失败",
   "preview_failed": "预览模板失败",
-  "invalid_id": "模板ID不能为空"
+  "invalid_id": "模板ID不能为空",
+  "template_code_exists": "该渠道下已存在相同模板代码"
 }
