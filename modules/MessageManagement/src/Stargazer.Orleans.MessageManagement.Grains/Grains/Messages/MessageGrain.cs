@@ -1,5 +1,5 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 using Orleans.Concurrency;
 using Stargazer.Orleans.MessageManagement.Domain;
@@ -19,7 +19,7 @@ namespace Stargazer.Orleans.MessageManagement.Grains.Grains.Messages;
 /// 消息发送 Grain 实现
 /// </summary>
 [StatelessWorker]
-public class MessageGrain : Grain, IMessageGrain
+public partial class MessageGrain : Grain, IMessageGrain
 {
     private readonly IRepository<MessageRecord, Guid> _recordRepository;
     private readonly IRepository<MessageTemplate, Guid> _templateRepository;
@@ -49,13 +49,29 @@ public class MessageGrain : Grain, IMessageGrain
 
     public async Task<MessageRecordDto> SendAsync(SendMessageInputDto input)
     {
-        var channel = (MessageChannel)input.Channel;
+        var channel = input.Channel;
+        Guid? templateId = null;
+
+        if (!string.IsNullOrEmpty(input.TemplateCode))
+        {
+            var template = await _templateRepository.FindAsync(
+                x => x.Code == input.TemplateCode && x.Channel == channel);
+            if (template != null)
+            {
+                templateId = template.Id;
+            }
+            else
+            {
+                _logger.LogWarning("Template code {TemplateCode} not found for channel {Channel}",
+                    input.TemplateCode, channel);
+            }
+        }
 
         var record = new MessageRecord
         {
             Id = Guid.NewGuid(),
             Channel = channel,
-            TemplateId = null,
+            TemplateId = templateId,
             TemplateCode = input.TemplateCode,
             Receiver = input.Receiver,
             Subject = input.Subject,
@@ -74,17 +90,6 @@ public class MessageGrain : Grain, IMessageGrain
         };
 
         await _recordRepository.InsertAsync(record);
-
-        if (!string.IsNullOrEmpty(input.TemplateCode))
-        {
-            var template = await _templateRepository.FindAsync(
-                x => x.Code == input.TemplateCode && x.Channel == channel);
-            if (template != null)
-            {
-                record.TemplateId = template.Id;
-                await _recordRepository.UpdateAsync(record);
-            }
-        }
 
         if (input.ScheduledAt.HasValue && input.ScheduledAt > DateTime.UtcNow)
         {
@@ -109,12 +114,12 @@ public class MessageGrain : Grain, IMessageGrain
 
     public async Task<List<MessageRecordDto>> BatchSendAsync(BatchSendMessageInputDto input)
     {
-        var channel = (MessageChannel)input.Channel;
-        var records = new List<MessageRecord>();
+        var channel = input.Channel;
+        var records = new List<MessageRecord>(input.Receivers.Count);
 
         foreach (var receiver in input.Receivers)
         {
-            var record = new MessageRecord
+            records.Add(new MessageRecord
             {
                 Id = Guid.NewGuid(),
                 Channel = channel,
@@ -132,34 +137,29 @@ public class MessageGrain : Grain, IMessageGrain
                 BusinessType = input.BusinessType,
                 CreatorId = Guid.Empty,
                 CreationTime = DateTime.UtcNow
-            };
-            records.Add(record);
+            });
         }
 
         try
         {
             await _recordRepository.BeginTransactionAsync();
-
             await _recordRepository.InsertAsync(records);
-
-            foreach (var record in records)
-            {
-                await SendMessageInternal(record);
-            }
-
             await _recordRepository.CommitTransactionAsync();
-
-            _logger.LogInformation("Batch send completed: {Count} messages, {Success} succeeded, {Failed} failed",
-                records.Count,
-                records.Count(r => r.Status == MessageStatus.Sent),
-                records.Count(r => r.Status == MessageStatus.Failed));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Batch send failed, rolling back transaction");
+            _logger.LogError(ex, "Failed to insert batch records, rolling back");
             await _recordRepository.RollbackTransactionAsync();
             throw;
         }
+
+        var sendTasks = records.Select(SendMessageInternal).ToList();
+        await Task.WhenAll(sendTasks);
+
+        _logger.LogInformation("Batch send completed: {Count} messages, {Success} succeeded, {Failed} failed",
+            records.Count,
+            records.Count(r => r.Status == MessageStatus.Sent),
+            records.Count(r => r.Status == MessageStatus.Failed));
 
         return records.Select(ToDto).ToList();
     }
@@ -197,10 +197,11 @@ public class MessageGrain : Grain, IMessageGrain
             pageSize: pageSize,
             orderBy: x => x.CreationTime,
             orderByDescending: true);
-        return new PageResult<MessageRecordDto>()
+
+        return new PageResult<MessageRecordDto>
         {
             Total = result.Total,
-            Items = result.Items.Select(ToDto).ToList(),
+            Items = result.Items.Select(ToDto).ToList()
         };
     }
 
@@ -209,12 +210,12 @@ public class MessageGrain : Grain, IMessageGrain
         var record = await _recordRepository.FindAsync(id);
         if (record == null)
         {
-            throw new KeyNotFoundException($"Message record with id '{id}' not found");
+            throw new KeyNotFoundException("record_not_found");
         }
 
         if (record.Status != MessageStatus.Failed)
         {
-            throw new InvalidOperationException("Only failed messages can be retried");
+            throw new InvalidOperationException("only_failed_can_retry");
         }
 
         record.Status = MessageStatus.Pending;
@@ -235,8 +236,9 @@ public class MessageGrain : Grain, IMessageGrain
             return false;
         }
 
-        if (record.Status == MessageStatus.Sent || record.Status == MessageStatus.Delivered)
+        if (record.Status is MessageStatus.Sent or MessageStatus.Delivered)
         {
+            _logger.LogWarning("Cannot cancel message {RecordId}: status is {Status}", id, record.Status);
             return false;
         }
 
@@ -296,21 +298,10 @@ public class MessageGrain : Grain, IMessageGrain
 
     private async Task<(bool Success, string? MessageId, string? ErrorMessage)> SendEmailAsync(MessageRecord record)
     {
-        var sender = _emailSenders.FirstOrDefault(x =>
-            x.ProviderName.Equals(record.Provider, StringComparison.OrdinalIgnoreCase));
-
+        var sender = GetEmailSender(record.Provider);
         if (sender == null)
         {
-            if (_emailSenders.Any())
-            {
-                sender = _emailSenders.First();
-                _logger.LogWarning("Email provider '{Provider}' not found, using default '{Default}'",
-                    record.Provider, sender.ProviderName);
-            }
-            else
-            {
-                return (false, null, "No email sender configured");
-            }
+            return (false, null, "No email sender configured");
         }
 
         var content = await RenderTemplateAsync(record);
@@ -321,37 +312,14 @@ public class MessageGrain : Grain, IMessageGrain
 
     private async Task<(bool Success, string? MessageId, string? ErrorMessage)> SendSmsAsync(MessageRecord record)
     {
-        var sender = _smsSenders.FirstOrDefault(x =>
-            x.ProviderName.Equals(record.Provider, StringComparison.OrdinalIgnoreCase));
-
+        var sender = GetSmsSender(record.Provider);
         if (sender == null)
         {
-            if (_smsSenders.Any())
-            {
-                sender = _smsSenders.First();
-                _logger.LogWarning("SMS provider '{Provider}' not found, using default '{Default}'",
-                    record.Provider, sender.ProviderName);
-            }
-            else
-            {
-                return (false, null, "No SMS sender configured");
-            }
+            return (false, null, "No SMS sender configured");
         }
 
         var templateCode = record.TemplateCode ?? _settings.Sms.DefaultTemplateCode;
-        Dictionary<string, string>? templateParams = null;
-
-        if (!string.IsNullOrEmpty(record.Variables))
-        {
-            try
-            {
-                templateParams = JsonSerializer.Deserialize<Dictionary<string, string>>(record.Variables);
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogWarning(ex, "Failed to deserialize variables for record {RecordId}", record.Id);
-            }
-        }
+        var templateParams = ParseVariables(record.Variables);
 
         var result = await sender.SendAsync(record.Receiver, templateCode, templateParams);
 
@@ -360,21 +328,10 @@ public class MessageGrain : Grain, IMessageGrain
 
     private async Task<(bool Success, string? MessageId, string? ErrorMessage)> SendPushAsync(MessageRecord record)
     {
-        var sender = _pushSenders.FirstOrDefault(x =>
-            x.ProviderName.Equals(record.Provider, StringComparison.OrdinalIgnoreCase));
-
+        var sender = GetPushSender(record.Provider);
         if (sender == null)
         {
-            if (_pushSenders.Any())
-            {
-                sender = _pushSenders.First();
-                _logger.LogWarning("Push provider '{Provider}' not found, using default '{Default}'",
-                    record.Provider, sender.ProviderName);
-            }
-            else
-            {
-                return (false, null, "No push sender configured");
-            }
+            return (false, null, "No push sender configured");
         }
 
         var content = await RenderTemplateAsync(record);
@@ -383,14 +340,84 @@ public class MessageGrain : Grain, IMessageGrain
         {
             Title = record.Subject ?? "",
             Content = content,
-            Extras = !string.IsNullOrEmpty(record.Variables)
-                ? JsonSerializer.Deserialize<Dictionary<string, string>>(record.Variables)
-                : null
+            Extras = ParseVariables(record.Variables)
         };
 
         var result = await sender.SendAsync(request);
 
         return (result.Success, result.MessageId, result.ErrorMessage);
+    }
+
+    private IEmailSender? GetEmailSender(string? providerName)
+    {
+        if (string.IsNullOrEmpty(providerName))
+        {
+            return _emailSenders.FirstOrDefault();
+        }
+
+        var sender = _emailSenders.FirstOrDefault(x =>
+            x.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+
+        if (sender == null)
+        {
+            var defaultSender = _emailSenders.FirstOrDefault();
+            if (defaultSender != null)
+            {
+                _logger.LogWarning("Email provider '{Provider}' not found, using default '{Default}'",
+                    providerName, defaultSender.ProviderName);
+            }
+            return defaultSender;
+        }
+
+        return sender;
+    }
+
+    private ISmsSender? GetSmsSender(string? providerName)
+    {
+        if (string.IsNullOrEmpty(providerName))
+        {
+            return _smsSenders.FirstOrDefault();
+        }
+
+        var sender = _smsSenders.FirstOrDefault(x =>
+            x.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+
+        if (sender == null)
+        {
+            var defaultSender = _smsSenders.FirstOrDefault();
+            if (defaultSender != null)
+            {
+                _logger.LogWarning("SMS provider '{Provider}' not found, using default '{Default}'",
+                    providerName, defaultSender.ProviderName);
+            }
+            return defaultSender;
+        }
+
+        return sender;
+    }
+
+    private IPushSender? GetPushSender(string? providerName)
+    {
+        if (string.IsNullOrEmpty(providerName))
+        {
+            return _pushSenders.FirstOrDefault();
+        }
+
+        var sender = _pushSenders.FirstOrDefault(x =>
+            x.ProviderName.Equals(providerName, StringComparison.OrdinalIgnoreCase));
+
+        if (sender == null)
+        {
+            var defaultSender = _pushSenders.FirstOrDefault();
+            if (defaultSender != null)
+            {
+                _logger.LogWarning("Push provider '{Provider}' not found, using default '{Default}'",
+                    providerName, defaultSender.ProviderName);
+            }
+            return defaultSender;
+        }
+
+        return sender;
     }
 
     private async Task<string> RenderTemplateAsync(MessageRecord record)
@@ -408,27 +435,34 @@ public class MessageGrain : Grain, IMessageGrain
             return record.Content;
         }
 
-        var content = template.ContentTemplate;
-        if (!string.IsNullOrEmpty(record.Variables))
+        var variables = ParseVariables(record.Variables);
+        if (variables == null || variables.Count == 0)
         {
-            try
-            {
-                var variables = JsonSerializer.Deserialize<Dictionary<string, string>>(record.Variables);
-                if (variables != null)
-                {
-                    foreach (var kvp in variables)
-                    {
-                        content = content.Replace($"{{{{{kvp.Key}}}}}", kvp.Value);
-                    }
-                }
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogWarning(ex, "Failed to render template for record {RecordId}", record.Id);
-            }
+            return template.ContentTemplate;
         }
 
-        return content;
+        return VariableRegex().Replace(template.ContentTemplate, match =>
+        {
+            var key = match.Groups["key"].Value;
+            return variables.TryGetValue(key, out var value) ? value : match.Value;
+        });
+    }
+
+    private static Dictionary<string, string>? ParseVariables(string? json)
+    {
+        if (string.IsNullOrEmpty(json))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     private string GetDefaultProvider(MessageChannel channel)
@@ -442,21 +476,8 @@ public class MessageGrain : Grain, IMessageGrain
         };
     }
 
-    private static MessageRecordDto ToDto(MessageRecord record)
+    private MessageRecordDto ToDto(MessageRecord record)
     {
-        Dictionary<string, string>? variables = null;
-        if (!string.IsNullOrEmpty(record.Variables))
-        {
-            try
-            {
-                variables = JsonSerializer.Deserialize<Dictionary<string, string>>(record.Variables);
-            }
-            catch
-            {
-                // Variables deserialization failed, return null
-            }
-        }
-
         return new MessageRecordDto
         {
             Id = record.Id,
@@ -466,7 +487,7 @@ public class MessageGrain : Grain, IMessageGrain
             Receiver = record.Receiver,
             Subject = record.Subject,
             Content = record.Content,
-            Variables = variables,
+            Variables = ParseVariables(record.Variables),
             Provider = record.Provider,
             Status = record.Status.ToString(),
             ExternalId = record.ExternalId,
@@ -481,4 +502,7 @@ public class MessageGrain : Grain, IMessageGrain
             CreationTime = record.CreationTime
         };
     }
+
+    [GeneratedRegex(@"\{\{(?<key>\w+)\}\}")]
+    private static partial Regex VariableRegex();
 }
