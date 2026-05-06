@@ -44,7 +44,7 @@ public class FanController(IClusterClient client, ILogger<FanController> logger)
 
     [HttpPut("{openId}")]
     [Authorize(policy: WechatPolicyNames.UpdateFans)]
-    public async Task<object> UpdateFan(string openId, Guid accountId, [FromBody] UpdateFanInput input, CancellationToken cancellationToken = default)
+    public async Task<WechatUserDto> UpdateFan(string openId, Guid accountId, [FromBody] UpdateFanInput input, CancellationToken cancellationToken = default)
     {
         var grain = client.GetGrain<IWechatUserGrain>(0);
 

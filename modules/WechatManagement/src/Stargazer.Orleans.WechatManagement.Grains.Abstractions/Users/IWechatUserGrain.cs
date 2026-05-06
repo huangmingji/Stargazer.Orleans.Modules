@@ -11,7 +11,7 @@ public interface IWechatUserGrain : IGrainWithIntegerKey
     
     Task<WechatUserDto> CreateUserAsync(CreateWechatUserInputDto input, CancellationToken cancellationToken = default);
     
-    Task<WechatUserDto?> UpdateUserAsync(Guid id, UpdateWechatUserInputDto input, CancellationToken cancellationToken = default);
+    Task<WechatUserDto> UpdateUserAsync(Guid id, UpdateWechatUserInputDto input, CancellationToken cancellationToken = default);
     
     Task<bool> DeleteUserAsync(Guid id, CancellationToken cancellationToken = default);
     

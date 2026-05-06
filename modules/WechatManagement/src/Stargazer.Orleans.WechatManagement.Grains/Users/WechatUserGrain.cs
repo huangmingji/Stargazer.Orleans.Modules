@@ -55,10 +55,13 @@ public class WechatUserGrain(
         return MapToDto(user);
     }
 
-    public async Task<WechatUserDto?> UpdateUserAsync(Guid id, UpdateWechatUserInputDto input, CancellationToken cancellationToken = default)
+    public async Task<WechatUserDto> UpdateUserAsync(Guid id, UpdateWechatUserInputDto input, CancellationToken cancellationToken = default)
     {
         var user = await wechatUserRepository.FindAsync(id, cancellationToken);
-        if (user == null) return null;
+        if (user == null)
+        {
+            throw new KeyNotFoundException("user_not_found"); 
+        }
 
         if (input.Remark != null) user.Remark = input.Remark;
         if (input.GroupId.HasValue) user.GroupId = input.GroupId;

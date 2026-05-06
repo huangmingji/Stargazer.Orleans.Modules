@@ -1,0 +1,21 @@
+services:
+  stargazer-ai:
+    image: ccr.ccs.tencentyun.com/stargazer/stargazer-orleans-users:${VERSION}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platform: ${PLATFORM}
+    env_file:
+      - .env
+    container_name: stargazer-orleans-users
+    restart: always
+    environment:
+      - Logging__LogLevel__Default=Error
+      - Logging__LogLevel__Microsoft=Error
+      - ConnectionStrings__Default=server=192.168.0.10;port=5432;Database=chat;uid=postgres;pwd=123456;
+      - ConnectionStrings__Redis=192.168.0.100
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./volume/logs:/app/Logs
+      - ./volume/files:/app/files
