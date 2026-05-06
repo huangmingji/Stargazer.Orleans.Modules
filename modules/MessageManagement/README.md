@@ -12,6 +12,46 @@
 - **重试机制**：支持对失败消息进行重试
 - **发送记录**：完整记录消息发送历史，支持查询和筛选
 - **Provider 路由**：支持按 Provider 名称路由，也支持默认 Provider
+- **全局异常处理 & 多语言**：统一异常拦截器，错误码自动映射本地化消息
+
+## JSON 约定
+
+所有 API 请求和响应使用 **snake_case** 命名策略：
+
+```json
+{
+  "channel": 1,
+  "receiver": "user@example.com",
+  "template_code": "register_verify_code",
+  "scheduled_at": "2026-03-21T10:00:00Z"
+}
+```
+
+## 全局异常处理
+
+所有 Controller 直接抛出异常，由 `GlobalExceptionFilter` 统一拦截并返回 `ResponseData` 格式。
+
+### 异常 → HTTP 状态码映射
+
+| 异常类型 | HTTP 状态码 | 默认错误码 |
+|---------|------------|-----------|
+| `ArgumentException` | 400 | 异常消息（错误码） |
+| `UnauthorizedAccessException` | 401 | `unauthorized` |
+| `InvalidOperationException` | 400 | 异常消息（错误码） |
+| `KeyNotFoundException` | 404 | `not_found` |
+| `EntityNotFoundException` | 404 | `NotFound` |
+| `LocalizedException` | 自定义 | 异常 Code |
+
+### 多语言
+
+通过查询参数或请求头切换语言：
+
+```
+GET /api/message?lang=zh-CN
+Accept-Language: zh-CN
+```
+
+翻译文件位于 `Resources/Strings.{lang}.json`，错误码自动查找对应翻译。
 
 ## 项目结构
 
@@ -36,6 +76,13 @@ Stargazer.Orleans.MessageManagement/
 │       ├── Controllers/
 │       │   ├── MessageController.cs
 │       │   └── TemplateController.cs
+│       ├── Middlewares/
+│       │   └── GlobalExceptionFilter.cs
+│       ├── Resources/
+│       │   ├── LocalizedException.cs
+│       │   ├── LocalizationService.cs
+│       │   ├── Strings.en.json
+│       │   └── Strings.zh-CN.json
 │       ├── Authorization/
 │       │   └── PermissionHandler.cs
 │       └── Program.cs
@@ -277,62 +324,62 @@ appsettings.json
 
 ### 消息接口 `/api/message`
 
-| 方法 | 路由 | 说明 |
-|------|------|------|
-| POST | `/api/message/send` | 发送单条消息 |
-| POST | `/api/message/batch-send` | 批量发送消息 |
-| GET | `/api/message/{id}` | 获取消息记录 |
-| GET | `/api/message` | 查询消息记录列表 |
-| POST | `/api/message/{id}/retry` | 重试发送失败的消息 |
-| POST | `/api/message/{id}/cancel` | 取消定时发送的消息 |
+| 方法 | 路由 | 说明 | 权限 |
+|------|------|------|------|
+| POST | `/api/message/send` | 发送单条消息 | `message:send` |
+| POST | `/api/message/batch-send` | 批量发送消息 | `message:send` |
+| GET | `/api/message/{id}` | 获取消息记录 | `message:view` |
+| GET | `/api/message` | 查询消息记录列表 | `message:view` |
+| POST | `/api/message/{id}/retry` | 重试发送失败的消息 | `message:retry` |
+| POST | `/api/message/{id}/cancel` | 取消定时发送的消息 | `message:cancel` |
 
 ### 模板接口 `/api/template`
 
-| 方法 | 路由 | 说明 |
-|------|------|------|
-| POST | `/api/template` | 创建模板 |
-| PUT | `/api/template` | 更新模板 |
-| DELETE | `/api/template/{id}` | 删除模板 |
-| GET | `/api/template/{id}` | 获取模板详情 |
-| GET | `/api/template/code/{code}` | 根据代码获取模板 |
-| GET | `/api/template/channel/{channel}` | 根据通道获取模板列表 |
-| GET | `/api/template` | 查询模板列表 |
-| POST | `/api/template/{id}/preview` | 预览模板渲染结果 |
+| 方法 | 路由 | 说明 | 权限 |
+|------|------|------|------|
+| POST | `/api/template` | 创建模板 | `template:create` |
+| PUT | `/api/template` | 更新模板 | `template:update` |
+| DELETE | `/api/template/{id}` | 删除模板 | `template:delete` |
+| GET | `/api/template/{id}` | 获取模板详情 | `template:view` |
+| GET | `/api/template/code/{code}` | 根据代码获取模板 | `template:view` |
+| GET | `/api/template/channel/{channel}` | 根据通道获取模板列表 | `template:view` |
+| GET | `/api/template` | 查询模板列表 | `template:view` |
+| POST | `/api/template/{id}/preview` | 预览模板渲染结果 | `template:view` |
 
 ## 数据模型
 
 ### SendMessageInputDto（发送消息）
 
-```jsonc
+```json
 {
-  "channel": 1,           // 必填：1=Email, 2=SMS, 3=Push
-  "receiver": "user@example.com",  // 必填：邮箱/手机号/设备Token
-  "subject": "邮件主题",    // 选填：仅 Email 通道
-  "content": "消息内容",   // 必填（无模板时）
-  "templateCode": "tpl_001",  // 选填：模板代码
-  "variables": {"name": "张三"},  // 选填：模板变量
-  "provider": "smtp",      // 选填：指定 Provider
-  "scheduledAt": "2026-03-21T10:00:00Z",  // 选填：定时发送时间
-  "senderId": "uuid",      // 选填：发送者ID
-  "businessId": "order_001",  // 选填：业务ID
-  "businessType": "notification"  // 选填：业务类型
+  "channel": 1,
+  "receiver": "user@example.com",
+  "subject": "邮件主题",
+  "content": "消息内容",
+  "template_code": "tpl_001",
+  "variables": {"name": "张三"},
+  "provider": "smtp",
+  "scheduled_at": "2026-03-21T10:00:00Z",
+  "sender_id": "uuid",
+  "business_id": "order_001",
+  "business_type": "notification"
 }
 ```
 
 ### BatchSendMessageInputDto（批量发送）
 
-```jsonc
+```json
 {
   "channel": 1,
-  "receivers": ["user1@example.com", "user2@example.com"],  // 必填：接收者列表
+  "receivers": ["user1@example.com", "user2@example.com"],
   "subject": "邮件主题",
   "content": "消息内容",
-  "templateCode": "tpl_001",
+  "template_code": "tpl_001",
   "variables": {"name": "用户"},
   "provider": "smtp",
-  "senderId": "uuid",
-  "businessId": "order_001",
-  "businessType": "notification"
+  "sender_id": "uuid",
+  "business_id": "order_001",
+  "business_type": "notification"
 }
 ```
 
@@ -343,15 +390,15 @@ appsettings.json
   "name": "注册验证码模板",
   "code": "register_verify_code",
   "channel": 2,
-  "subjectTemplate": "您的验证码是 {{code}}",
-  "contentTemplate": "您好 {{name}}，您的验证码是 {{code}}，{{minutes}}分钟内有效。",
+  "subject_template": "您的验证码是 {{code}}",
+  "content_template": "您好 {{name}}，您的验证码是 {{code}}，{{minutes}}分钟内有效。",
   "variables": [
     {"name": "name", "type": "string", "required": true},
     {"name": "code", "type": "string", "required": true},
-    {"name": "minutes", "type": "string", "required": false, "defaultValue": "5"}
+    {"name": "minutes", "type": "string", "required": false, "default_value": "5"}
   ],
   "description": "用于发送注册验证码",
-  "defaultProvider": "aliyun",
+  "default_provider": "aliyun",
   "tags": "auth,verify"
 }
 ```
@@ -359,6 +406,8 @@ appsettings.json
 ## 响应格式
 
 所有 API 响应遵循统一格式：
+
+成功响应：
 
 ```json
 {
@@ -368,12 +417,22 @@ appsettings.json
 }
 ```
 
-错误响应：
+错误响应（错误码自动翻译）：
 
 ```json
 {
   "code": "invalid_receiver",
   "message": "Receiver is required.",
+  "data": null
+}
+```
+
+发送 `?lang=zh-CN` 时：
+
+```json
+{
+  "code": "invalid_receiver",
+  "message": "接收者为必填项",
   "data": null
 }
 ```
@@ -525,102 +584,102 @@ appsettings.json
 
 ### 1. 发送邮件
 
-```http
-POST /api/message/send
-Content-Type: application/json
-
-{
-  "channel": 1,
-  "receiver": "user@example.com",
-  "subject": "欢迎注册",
-  "content": "欢迎 {{name}} 加入我们！"
-}
+```bash
+curl -X POST http://localhost:5000/api/message/send \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "channel": 1,
+    "receiver": "user@example.com",
+    "subject": "欢迎注册",
+    "content": "欢迎 {{name}} 加入我们！"
+  }'
 ```
 
 ### 2. 使用模板发送短信
 
-```http
-POST /api/message/send
-Content-Type: application/json
-
-{
-  "channel": 2,
-  "receiver": "13800138000",
-  "templateCode": "sms_verify_code",
-  "variables": {
-    "code": "123456",
-    "minutes": "5"
-  },
-  "provider": "aliyun"
-}
+```bash
+curl -X POST http://localhost:5000/api/message/send \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "channel": 2,
+    "receiver": "13800138000",
+    "template_code": "sms_verify_code",
+    "variables": {
+      "code": "123456",
+      "minutes": "5"
+    },
+    "provider": "aliyun"
+  }'
 ```
 
 ### 3. 批量发送
 
-```http
-POST /api/message/batch-send
-Content-Type: application/json
-
-{
-  "channel": 1,
-  "receivers": ["user1@example.com", "user2@example.com"],
-  "subject": "系统通知",
-  "content": "您的订单 {{orderId}} 已发货"
-}
+```bash
+curl -X POST http://localhost:5000/api/message/batch-send \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "channel": 1,
+    "receivers": ["user1@example.com", "user2@example.com"],
+    "subject": "系统通知",
+    "content": "您的订单 {{orderId}} 已发货"
+  }'
 ```
 
 ### 4. 定时发送消息
 
-```http
-POST /api/message/send
-Content-Type: application/json
-
-{
-  "channel": 2,
-  "receiver": "13800138000",
-  "templateCode": "sms_verify_code",
-  "variables": {
-    "code": "123456"
-  },
-  "scheduledAt": "2026-03-25T10:00:00Z"
-}
+```bash
+curl -X POST http://localhost:5000/api/message/send \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "channel": 2,
+    "receiver": "13800138000",
+    "template_code": "sms_verify_code",
+    "variables": {
+      "code": "123456"
+    },
+    "scheduled_at": "2026-03-25T10:00:00Z"
+  }'
 ```
 
-> **注意**: `scheduledAt` 必须大于当前时间，最小间隔为 1 分钟。消息将在指定时间自动发送。
+> **注意**: `scheduled_at` 必须大于当前时间，最小间隔为 1 分钟。消息将在指定时间自动发送。
 
 ### 5. 创建模板
 
-```http
-POST /api/template
-Content-Type: application/json
-
-{
-  "name": "订单发货通知",
-  "code": "order_shipped",
-  "channel": 1,
-  "subjectTemplate": "订单 {{orderId}} 已发货",
-  "contentTemplate": "您好 {{customerName}}，您的订单 {{orderId}} 已于 {{shipTime}} 发货，预计 {{deliveryDays}} 天送达。",
-  "variables": [
-    {"name": "customerName", "type": "string", "required": true},
-    {"name": "orderId", "type": "string", "required": true},
-    {"name": "shipTime", "type": "string", "required": true},
-    {"name": "deliveryDays", "type": "string", "required": false, "defaultValue": "3-5"}
-  ]
-}
+```bash
+curl -X POST http://localhost:5000/api/template \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "name": "订单发货通知",
+    "code": "order_shipped",
+    "channel": 1,
+    "subject_template": "订单 {{orderId}} 已发货",
+    "content_template": "您好 {{customerName}}，您的订单 {{orderId}} 已于 {{shipTime}} 发货，预计 {{deliveryDays}} 天送达。",
+    "variables": [
+      {"name": "customerName", "type": "string", "required": true},
+      {"name": "orderId", "type": "string", "required": true},
+      {"name": "shipTime", "type": "string", "required": true},
+      {"name": "deliveryDays", "type": "string", "required": false, "default_value": "3-5"}
+    ]
+  }'
 ```
 
-### 5. 预览模板
+### 6. 预览模板
 
-```http
-POST /api/template/{templateId}/preview
-Content-Type: application/json
-
-{
-  "customerName": "张三",
-  "orderId": "ORDER20260320001",
-  "shipTime": "2026-03-20",
-  "deliveryDays": "3-5"
-}
+```bash
+curl -X POST http://localhost:5000/api/template/{templateId}/preview \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "customerName": "张三",
+    "orderId": "ORDER20260320001",
+    "shipTime": "2026-03-20",
+    "deliveryDays": "3-5"
+  }'
 ```
 
 ## 开发指南
@@ -638,7 +697,7 @@ Content-Type: application/json
 public class NewSmsSender : ISmsSender
 {
     public string ProviderName => "newprovider";
-    
+
     public async Task<SmsSendResult> SendAsync(
         string phoneNumber,
         string templateCode,
@@ -647,7 +706,7 @@ public class NewSmsSender : ISmsSender
     {
         // 实现发送逻辑
     }
-    
+
     // 其他方法...
 }
 ```
@@ -890,7 +949,7 @@ protected async Task LoginAsAdminAsync()
     // 调用 Users.Silo 获取 token
     var loginInput = new VerifyPasswordInputDto
     {
-        Name = "admin",
+        Account = "admin",
         Password = "Admin@123456"
     };
     // ...
@@ -910,6 +969,7 @@ protected async Task LoginAsAdminAsync()
 5. **批量发送**：支持批量发送消息
 6. **消息记录**：完整的发送历史记录
 7. **定时发送**：基于 Redis Reminder 的持久化定时调度
+8. **全局异常处理**：Controller 统一异常拦截，错误码自动翻译
 
 ### 待实现功能
 
@@ -927,3 +987,4 @@ protected async Task LoginAsAdminAsync()
 3. **极光推送**：使用 HTTP API v3（HTTP Basic Auth 认证）
 4. **友盟推送**：使用 HTTP API（MD5 签名认证）
 5. **手机号处理**：所有 SMS Provider 自动处理中国手机号格式（支持 `138xxxx`、`+86138xxx`、`86138xxx`）
+6. **JSON 约定**：所有 API 使用 snake_case，DTO 使用 `[JsonPropertyName]` 属性映射
